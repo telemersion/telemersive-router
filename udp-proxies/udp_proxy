@@ -1,25 +1,41 @@
-#!/usr/bin/env python
-import socket, sys, thread, time
+#!/usr/bin/env python3
+"""udp_proxy relays UDP packets between two endpoints. This allows two end-points
+behind NAT firewalls to communicate with each other by relaying their traffic
+through a server with a public IP running this script.
+
+Arguments:
+    1 port number
+"""
+
+import socket
+import sys
+import threading 
+import time
 
 UDP_IP = "0.0.0.0"
-timeout = 10
+TIMEOUT = 10
+
 try:
     UDP_PORT = int(sys.argv[1])
 except ValueError:
-    print 'Specified port is not a number'
+    sys.stderr.write('Specified port is not a number\n')
+    sys.exit(1)
+except IndexError:
+    sys.stderr.write('Please specify port number as argument\n')
     sys.exit(1)
 
 # haben wir einen gueltigen Port
-if not isinstance( UDP_PORT, int ) or not  1024 <= UDP_PORT <= 40000:
-    print 'Specified port (', UDP_PORT, ') is invalid.'
-    print 'Valid port range: 1024 - 40000'
+if not isinstance(UDP_PORT, int) or not  1024 <= UDP_PORT <= 40000:
+    sys.stderr.write('Specified port "%s" is invalid.\n' % UDP_PORT)
+    sys.stderr.write('Valid port range: 1024 - 40000\n')
     sys.exit(1)
 
 # Lass uns die socket erzeugen
 try:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.settimeout(0.1)
     sock.bind((UDP_IP, UDP_PORT))
-except socket.error, msg:
+except socket.error as msg:
     sys.stderr.write("[ERROR] %s\n" % msg[1])
     sys.exit(1)
 
@@ -28,6 +44,7 @@ client1 = None
 client2 = None
 lastCall1 = 0
 lastCall2 = 0
+stop = False
 
 def save_file():
     global client1
@@ -36,13 +53,13 @@ def save_file():
     text_file.write(str(client1) + " < - > " + str(client2) + "\n")
     text_file.close()
 
-def loop(threadName, delay):
-    global client1
-    global client2
-    global lastCall1
-    global lastCall2
-    while True:
-        data, addr = sock.recvfrom(65536)
+def loop():
+    global client1, client2, lastCall1, lastCall2, stop
+    while not stop:
+        try:
+            data, addr = sock.recvfrom(65536)
+        except socket.timeout:
+            continue
 
         # Assigning clients
         if addr != client1 and addr != client2:
@@ -60,17 +77,23 @@ def loop(threadName, delay):
                 sock.sendto(data, client1)
                 lastCall2 = time.time()
 
-try:
-    thread.start_new_thread( loop, ("SenderLoopThrd", 0, ) )
-    print "started listeing thread"
-except:
-    print "Error: unable to start thread"
+def main():
+    global client1, client2, lastCall1, lastCall2, stop
+    try:
+        proxy_thread = threading.Thread(target=loop)
+        proxy_thread.start()
+        while 1:
+            time.sleep(1)
+            if client1 != None and (lastCall1 + TIMEOUT) < time.time():
+                client1 = None
+                save_file()
+            if client2 != None and (lastCall2 + TIMEOUT) < time.time():
+                client2 = None
+                save_file()
+    except KeyboardInterrupt:
+        stop = True
+        sys.exit(0)
 
-while 1:
-    time.sleep(1)
-    if client1 != None and (lastCall1 + timeout) < time.time():
-        client1 = None
-        save_file()
-    if client2 != None and (lastCall2 + timeout) < time.time():
-        client2 = None
-        save_file()
+if __name__ == '__main__':
+        main()
+
