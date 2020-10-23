@@ -1,27 +1,37 @@
 #!/usr/bin/env python3
-#
-# udp_dyn_proxy manages an internal lookup table to relay incoming
-# udp datagrams to a certain destination
-#
-# The lookup tables contains pairs of ip:port tuples. The table
-# can be edited by sending UDP datagrams from localhost.
-#
-# EXAPMLES
-#
-# Add link:
-#
-#   addlink 10.158.0.53 12304 8.8.8.8 45682
-#
-# Delete link:
-#
-#   dellink 10.158.0.53 12304 8.8.8.8 45682
-#
-# Print lookup table:
-#
-#   printlinks
-#
+"""Proxy that relays UDP packets between clients. This implementation
+handles many client connections simultaneously. In order for a connection
+between two clients to be established, the two clients need to send
+a previously agreed-upon token message. On a match, this script relays
+further packets between the clients.
 
-import socket, sys
+udp_dyn_proxy manages an internal lookup table to relay incoming
+udp datagrams to a certain destination
+
+The lookup tables contains pairs of ip:port tuples. The table
+can be edited by sending UDP datagrams from localhost.
+
+EXAPMLES
+
+Add link:
+
+  addlink 10.158.0.53 12304 8.8.8.8 45682
+
+Delete link:
+
+  dellink 10.158.0.53 12304 8.8.8.8 45682
+
+Print lookup table:
+
+  printlinks
+
+Clear lookup table:
+
+  clear
+
+"""
+import socket
+import sys
 
 # init values
 UDP_IP = '0.0.0.0'
