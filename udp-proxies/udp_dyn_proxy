@@ -110,35 +110,41 @@ methods = {
     }
 
 # our main loop
-while True:
-    data, srcaddr = sock.recvfrom(65507)
+def main():
     try:
-        data_serialized = data.decode()
-    except UnicodeDecodeError:
-        data_serialized = ''
+        while True:
+            data, srcaddr = sock.recvfrom(65507)
+            try:
+                data_serialized = data.decode()
+            except UnicodeDecodeError:
+                data_serialized = ''
 
-    # manipulate table if packet is from localhost
-    if srcaddr[0] == '127.0.0.1':
-        command = data_serialized.split()
-        try:
-            methods[command[0]]()
-        except KeyError:
-            payload = command[0] + ': method not implemented\n'
-            sock.sendto(payload.encode(), srcaddr)
+            # manipulate table if packet is from localhost
+            if srcaddr[0] == '127.0.0.1':
+                command = data_serialized.split()
+                try:
+                    methods[command[0]]()
+                except KeyError:
+                    payload = command[0] + ': method not implemented\n'
+                    sock.sendto(payload.encode(), srcaddr)
 
-    # check token
-    elif data_serialized[0:7] == '_TOKEN ':
-        token = data_serialized.split()
-        try:
-            addtoken(token[1], srcaddr)
-        except:
-            pass
+            # check token
+            elif data_serialized[0:7] == '_TOKEN ':
+                token = data_serialized.split()
+                try:
+                    addtoken(token[1], srcaddr)
+                except:
+                    pass
 
-    # forward data according to lookup table
-    else:
-        try:
-            destaddr = linklookup[srcaddr]
-            sock.sendto(data, destaddr)
-        except:
-            pass
+            # forward data according to lookup table
+            else:
+                try:
+                    destaddr = linklookup[srcaddr]
+                    sock.sendto(data, destaddr)
+                except:
+                    pass
+    except KeyboardInterrupt:
+        sys.exit(0)
 
+if __name__ == '__main__':
+    main()
