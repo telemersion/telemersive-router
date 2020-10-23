@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+import socket, sys, thread, time
+
+UDP_IP = "0.0.0.0"
+timeout = 10
+try:
+    UDP_PORT = int(sys.argv[1])
+except ValueError:
+    print 'Specified port is not a number'
+    sys.exit(1)
+
+# haben wir einen gueltigen Port
+if not isinstance( UDP_PORT, int ) or not  1024 <= UDP_PORT <= 40000:
+    print 'Specified port (', UDP_PORT, ') is invalid.'
+    print 'Valid port range: 1024 - 40000'
+    sys.exit(1)
+
+# Lass uns die socket erzeugen
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind((UDP_IP, UDP_PORT))
+except socket.error, msg:
+    sys.stderr.write("[ERROR] %s\n" % msg[1])
+    sys.exit(1)
+
+addr = None
+client1 = None
+client2 = None
+lastCall1 = 0
+lastCall2 = 0
+
+def save_file():
+    global client1
+    global client2
+    text_file = open("/var/www/html/ports/" + str(UDP_PORT) + ".txt", "w")
+    text_file.write(str(client1) + " < - > " + str(client2) + "\n")
+    text_file.close()
+
+def loop(threadName, delay):
+    global client1
+    global client2
+    global lastCall1
+    global lastCall2
+    while True:
+        data, addr = sock.recvfrom(65536)
+
+        # Assigning clients
+        if addr != client1 and addr != client2:
+            client1 = client2
+            client2 = addr
+            lastCall2 = time.time()
+            save_file()
+
+        # transmit data
+        if client1 and client2:
+            if addr == client1:
+                sock.sendto(data, client2)
+                lastCall1 = time.time()
+            elif addr == client2:
+                sock.sendto(data, client1)
+                lastCall2 = time.time()
+
+try:
+    thread.start_new_thread( loop, ("SenderLoopThrd", 0, ) )
+    print "started listeing thread"
+except:
+    print "Error: unable to start thread"
+
+while 1:
+    time.sleep(1)
+    if client1 != None and (lastCall1 + timeout) < time.time():
+        client1 = None
+        save_file()
+    if client2 != None and (lastCall2 + timeout) < time.time():
+        client2 = None
+        save_file()
