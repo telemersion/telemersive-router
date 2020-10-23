@@ -1,0 +1,99 @@
+#!/usr/bin/env python
+import socket, sys, select, thread, time
+
+UDP_IP = "0.0.0.0"
+# timeout in seconds
+timeout = 3
+
+try:
+    UDP_PORT_SENDER = int(sys.argv[1])
+    UDP_PORT_MANY = UDP_PORT_SENDER + 5
+except ValueError:
+    print 'Specified port is not a number'
+    sys.exit(1)
+
+if not isinstance( UDP_PORT_SENDER, int ) or not  1024 <= UDP_PORT_SENDER <= 40000:
+    print 'Specified port (', UDP_PORT_SENDER, ') is invalid.'
+    print 'Valid port range: 1024 - 40000'
+    sys.exit(1)
+
+# Lass uns die socket erzeugen
+try:
+    sock_sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock_sender.bind((UDP_IP, UDP_PORT_SENDER))
+    sock_many = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock_many.bind((UDP_IP, UDP_PORT_MANY))
+except socket.error, msg:
+    sys.stderr.write("[ERROR] %s\n" % msg[1])
+    sys.exit(1)
+
+addr = None
+# dictionary mit allen addr tuple und update mit current timestamp
+clientMany = {}
+clientSender = None
+clientSenderLastTime = None
+clientSenderOld = None
+
+# Define a function for the sender loop
+def sender_loop( threadName, delay):
+    global clientSender
+    global clientMany
+    global clientSenderLastTime
+    global clientSenderOld
+    while True:
+        data, addr = sock_sender.recvfrom(65536)
+        # cleanup dictionary mit aktuellem timestamp
+        for key, value in list(clientMany.items()):
+            if (value + timeout) < time.time():
+                del clientMany[key]
+        # send data to all surviving addresses
+        for key in clientMany.keys():
+            sock_many.sendto(data, key)
+	# check if sender address has changed
+        if clientSender != addr:
+            clientSender = addr
+            # update file with current connections
+            save_file()
+            clientSenderLastTime = time.time()
+            clientSenderOld = addr
+
+# Define a function for the many (receiver) loop
+def many_loop( threadName, delay):
+    global clientMany
+    while True:
+        data, addr = sock_many.recvfrom(65536)
+        # update dictionary mit aktuellem timestamp
+        clientMany [addr] = time.time()
+        # update file with current connections
+        save_file()
+
+def save_file():
+    global clientSender
+    global clientMany
+    global clientSenderLastTime
+    global clientSenderOld
+    text_file = open("/var/www/html/ports/" + str(UDP_PORT_SENDER) + ".txt", "w")
+    if clientSenderLastTime > time.time() - 1:
+        text_file.write("WARNING: Two senders detected: " + str(clientSender) +  ", " + str(clientSenderOld) + "\n")
+    else:
+        text_file.write(str(clientSender) + " > " + str(list(clientMany.keys())) + "\n")
+    text_file.close()
+
+try:
+   thread.start_new_thread( sender_loop, ("SenderLoopThrd", 0, ) )
+   thread.start_new_thread( many_loop, ("SenderLoopThrd", 0, ) )
+   save_file()
+except:
+   print "Error: unable to start thread"
+
+while 1:
+   # pass wuerde unnoetigerweise die CPU am Anschlag laufen lassen
+   time.sleep(1)
+   if clientSender != None and clientSenderLastTime < time.time() - 10:
+       clientSender = None
+       save_file()
+   if clientSender == None and len(clientMany) > 0:
+       for key, value in list(clientMany.items()):
+           if((value + timeout) < time.time()):
+               del clientMany[key]
+               save_file()
