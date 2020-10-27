@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""udp_multi_proxy relays incoming packets from one sender client to many receiver
+clients. The sender client connects to port P and receiver clients to P + 5.
+Receiver clients are required to send dummy packets in regular intervals in order
+to receive relayed data. 
+NOTE: There is no mechanism to prevent many clients from connecting to the sender
+port. All traffic is relayed, which might lead to garbled data.
+
+Arguments:
+    1 port number
+"""
 
 import socket
 import sys
