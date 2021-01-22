@@ -1,0 +1,13 @@
+[Unit]
+Description=UDP proxy for jacktrip and ultragrid on port %I
+After=syslog.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/sbin/udp_proxy %i
+User=tpf-server
+Group=tpf-server
+
+[Install]
+WantedBy=multi-user.target
+
