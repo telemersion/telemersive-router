@@ -12,12 +12,15 @@ def main():
     try:
         my_proxy = proxies.SimpleProxy(listen_port=4444)
         my_mirror = proxies.Mirror(listen_port=4484)
+        my_multi = proxies.MultiProxy(listen_port=11010, send_port=11015)
         my_proxy.start()
         my_mirror.start()
-        time.sleep(10)
+        my_multi.start()
+        time.sleep(20)
         print('Jetzt wollen wir aufhören')
         my_proxy.stop()
         my_mirror.stop()
+        my_multi.stop()
         print('Bis hier mussten wir warten')
     except KeyboardInterrupt:
         sys.exit(0)
