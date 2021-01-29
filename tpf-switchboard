@@ -5,26 +5,97 @@
 tpf-switchboard creates and destroys udp proxies dynamically on request.
 """
 
+import socket
+import sys
 import time
 import proxies
 
+# format of myproxies
+# myproxies = {
+#      4484: {
+#          'obj':<proxy_obj>,
+#          'type': 'simple',
+#          'desc': 'Some description about the proxy'
+#      }
+# }
+# valid types: 'simple', 'multi', 'mirror'
+myproxies = {}
+
+def launch_proxy(type=None, port=None, desc=None):
+    if not type or not port or not desc:
+        return 'invalid parameters given'
+    try:
+        myproxies[port]
+    except KeyError:
+        if type == 'simple':
+            obj = proxies.SimpleProxy(listen_port=port)
+        elif type == 'multi':
+            obj = proxies.MultiProxy(listen_port=port, send_port=port+5)
+        elif type == 'mirror':
+            obj = proxies.Mirror(listen_port=port)
+        else:
+            return 'invalid type given (valid values: simple, multi, mirror)\n'
+        obj.start()
+        myproxies[port] = {'obj': obj, 'type': type, 'desc': desc}
+        return "proxy successfully started on port %s\n" % port
+    else:
+        return 'port %s already in use\n' % port
+
+def kill_proxy(port=None):
+    try:
+        myproxies[port]['obj'].stop()
+        del myproxies[port]
+        return 'proxy on port %s successfully killed\n' % port
+    except KeyError:
+        return 'No proxy running on port %s\n' % port
+
+def list_proxies():
+    msg = ''
+    for port, proxy in list(myproxies.items()):
+        msg = msg + 'port=%s, type=%s, description="%s"\n' % (port, proxy['type'], proxy['desc'])
+    return msg
+
 def main():
     try:
-        my_proxy = proxies.SimpleProxy(listen_port=4444)
-        my_mirror = proxies.Mirror(listen_port=4484)
-        my_multi = proxies.MultiProxy(listen_port=11010, send_port=11015)
-        my_proxy.start()
-        my_mirror.start()
-        my_multi.start()
-        time.sleep(20)
-        print('Jetzt wollen wir aufhören')
-        my_proxy.stop()
-        my_mirror.stop()
-        my_multi.stop()
-        print('Bis hier mussten wir warten')
-    except KeyboardInterrupt:
-        sys.exit(0)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', 5099))
+    except socket.error(msg):
+        sys.stderr.write("[ERROR] %s\n" % msg[1])
+        sys.exit(1)
+
+    while True:
+        data, addr = sock.recvfrom(65507)
+        data_serialized = data.decode()
+        cmd = data_serialized.split()
+        try:
+            cmd[0]
+        except KeyError:
+            msg = 'No command given\n'
+        else:
+            if cmd[0] == 'launch':
+                try:
+                    msg = launch_proxy(port=int(cmd[1]), type=cmd[2], desc=' '.join(cmd[3:]))
+                except ValueError:
+                    msg = 'given port is not a number\n'
+                except IndexError:
+                    msg = 'no port number given\n'
+            elif cmd[0] == 'kill':
+                try:
+                    msg = kill_proxy(port=int(cmd[1]))
+                except ValueError:
+                    msg = 'given port is not a number\n'
+                except IndexError:
+                    msg = 'no port number given\n'
+            elif cmd[0] == 'list':
+                msg = list_proxies()
+            else:
+                msg = 'Unkown command: %s\n' % cmd[0]
+        sock.sendto(msg.encode(), addr)
 
 if __name__ == '__main__':
+    try:
         main()
-
+    except KeyboardInterrupt:
+        for port in myproxies.keys():
+            myproxies[port]['obj'].stop()
+        sys.exit(0)
