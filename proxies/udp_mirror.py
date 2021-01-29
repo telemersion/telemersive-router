@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-udp_mirror
+udp_mirror: reflects udp packets to their origin
 """
 
 import socket

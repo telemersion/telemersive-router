@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-simple-proxy
+udp_simple_proxy: for 1-to-1 connections
 """
 
 import socket
