@@ -1,68 +1,21 @@
 #!/usr/bin/env python3
-"""udp_proxy relays UDP packets between two endpoints. This allows two end-points
-behind NAT firewalls to communicate with each other by relaying their traffic
-through a server with a public IP running this script.
+# -*- coding: utf-8 -*-
 
-Arguments:
-    1 port number
+"""
+tpf-switchboard creates and destroys udp proxies dynamically on request.
 """
 
-import socket
-import sys
-import threading
 import time
-
-UDP_IP = "0.0.0.0"
-
-try:
-    UDP_PORT = int(sys.argv[1])
-except ValueError:
-    sys.stderr.write('Specified port is not a number\n')
-    sys.exit(1)
-except IndexError:
-    sys.stderr.write('Please specify port number as argument\n')
-    sys.exit(1)
-
-# haben wir einen gueltigen Port
-if not isinstance(UDP_PORT, int) or not  1024 <= UDP_PORT <= 65535:
-    sys.stderr.write('Specified port "%s" is invalid.\n' % UDP_PORT)
-    sys.stderr.write('Valid port range: 1024 - 65535\n')
-    sys.exit(1)
-
-# Lass uns die socket erzeugen
-try:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((UDP_IP, UDP_PORT))
-except socket.error as msg:
-    sys.stderr.write("[ERROR] %s\n" % msg[1])
-    sys.exit(1)
-
-
-
-def loop():
-    client1 = None
-    client2 = None
-    while True:
-        try:
-            data, addr = sock.recvfrom(65536)
-        except socket.timeout:
-            continue
-
-        # Assigning clients
-        if addr != client1 and addr != client2:
-            client1 = client2
-            client2 = addr
-
-        # transmit data
-        if client1 and client2:
-            if addr == client1:
-                sock.sendto(data, client2)
-            elif addr == client2:
-                sock.sendto(data, client1)
+import proxies
 
 def main():
     try:
-        loop()
+        my_proxy = proxies.SimpleProxy(listen_port=4444)
+        my_proxy.start()
+        time.sleep(10)
+        print('Jetzt wollen wir aufhören')
+        my_proxy.stop()
+        print('Bis hier mussten wir warten')
     except KeyboardInterrupt:
         sys.exit(0)
 
