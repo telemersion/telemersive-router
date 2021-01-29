@@ -37,13 +37,11 @@ except socket.error as msg:
     sys.stderr.write("[ERROR] %s\n" % msg[1])
     sys.exit(1)
 
-addr = None
-client1 = None
-client2 = None
 
 
 def loop():
-    global client1, client2
+    client1 = None
+    client2 = None
     while True:
         try:
             data, addr = sock.recvfrom(65536)
