@@ -9,11 +9,10 @@ Arguments:
 
 import socket
 import sys
-import threading 
+import threading
 import time
 
 UDP_IP = "0.0.0.0"
-TIMEOUT = 10
 
 try:
     UDP_PORT = int(sys.argv[1])
@@ -25,15 +24,14 @@ except IndexError:
     sys.exit(1)
 
 # haben wir einen gueltigen Port
-if not isinstance(UDP_PORT, int) or not  1024 <= UDP_PORT <= 40000:
+if not isinstance(UDP_PORT, int) or not  1024 <= UDP_PORT <= 65535:
     sys.stderr.write('Specified port "%s" is invalid.\n' % UDP_PORT)
-    sys.stderr.write('Valid port range: 1024 - 40000\n')
+    sys.stderr.write('Valid port range: 1024 - 65535\n')
     sys.exit(1)
 
 # Lass uns die socket erzeugen
 try:
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(0.1)
     sock.bind((UDP_IP, UDP_PORT))
 except socket.error as msg:
     sys.stderr.write("[ERROR] %s\n" % msg[1])
@@ -42,20 +40,11 @@ except socket.error as msg:
 addr = None
 client1 = None
 client2 = None
-lastCall1 = 0
-lastCall2 = 0
-stop = False
 
-def save_file():
-    global client1
-    global client2
-    text_file = open("/var/www/html/ports/" + str(UDP_PORT) + ".txt", "w")
-    text_file.write(str(client1) + " < - > " + str(client2) + "\n")
-    text_file.close()
 
 def loop():
-    global client1, client2, lastCall1, lastCall2, stop
-    while not stop:
+    global client1, client2
+    while True:
         try:
             data, addr = sock.recvfrom(65536)
         except socket.timeout:
@@ -65,33 +54,18 @@ def loop():
         if addr != client1 and addr != client2:
             client1 = client2
             client2 = addr
-            lastCall2 = time.time()
-            save_file()
 
         # transmit data
         if client1 and client2:
             if addr == client1:
                 sock.sendto(data, client2)
-                lastCall1 = time.time()
             elif addr == client2:
                 sock.sendto(data, client1)
-                lastCall2 = time.time()
 
 def main():
-    global client1, client2, lastCall1, lastCall2, stop
     try:
-        proxy_thread = threading.Thread(target=loop)
-        proxy_thread.start()
-        while 1:
-            time.sleep(1)
-            if client1 != None and (lastCall1 + TIMEOUT) < time.time():
-                client1 = None
-                save_file()
-            if client2 != None and (lastCall2 + TIMEOUT) < time.time():
-                client2 = None
-                save_file()
+        loop()
     except KeyboardInterrupt:
-        stop = True
         sys.exit(0)
 
 if __name__ == '__main__':
