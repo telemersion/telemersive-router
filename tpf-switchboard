@@ -9,6 +9,7 @@ import socket
 import sys
 import time
 import proxies
+from flask import Flask, json, Response, request
 
 # format of myproxies
 # myproxies = {
@@ -20,10 +21,19 @@ import proxies
 # }
 # valid types: 'simple', 'multi', 'mirror'
 myproxies = {}
+baseroute ='/proxies/'
 
-def launch_proxy(type=None, port=None, desc=None):
-    if not type or not port or not desc:
-        return 'invalid parameters given'
+api = Flask(__name__)
+
+class r(Response):
+    default_mimetype = 'application/json'
+
+@api.route(basroute, methods=['POST'])
+def launch_proxy():
+    data = request.get_json()
+    try:
+        port = data['port']
+        assert 
     try:
         myproxies[port]
     except KeyError:
