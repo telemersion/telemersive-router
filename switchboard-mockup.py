@@ -43,7 +43,7 @@ def start_proxy():
 @api.route(baseroute + '<int:port>', methods=['DELETE'])
 def stop_proxy(port):
     try:
-        del companies[port]
+        del myproxies[port]
         response = {'status': 'OK', 'msg': 'Proxy successfully stopped'}
         return r(json.dumps(response))
     except KeyError:
