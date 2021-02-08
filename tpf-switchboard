@@ -5,7 +5,7 @@
 tpf-switchboard creates and destroys udp proxies dynamically on request.
 """
 
-import socket
+import copy
 import sys
 import time
 import proxies
@@ -14,98 +14,115 @@ from flask import Flask, json, Response, request
 # format of myproxies
 # myproxies = {
 #      4484: {
-#          'obj':<proxy_obj>,
+#          'obj': <proxy_obj>,
 #          'type': 'simple',
-#          'desc': 'Some description about the proxy'
+#          'description': 'Some description about the proxy'
 #      }
 # }
 # valid types: 'simple', 'multi', 'mirror'
 myproxies = {}
-baseroute ='/proxies/'
+
+port_range = range(10000, 20000)
+baseroute = '/proxies/'
+valid_types = ['mirror', 'simple', 'multi']
+server_port = 8080
 
 api = Flask(__name__)
 
 class r(Response):
     default_mimetype = 'application/json'
 
-@api.route(basroute, methods=['POST'])
-def launch_proxy():
-    data = request.get_json()
-    try:
-        port = data['port']
-        assert 
-    try:
-        myproxies[port]
-    except KeyError:
-        if type == 'simple':
-            obj = proxies.SimpleProxy(listen_port=port)
-        elif type == 'multi':
-            obj = proxies.MultiProxy(listen_port=port, send_port=port+5)
-        elif type == 'mirror':
-            obj = proxies.Mirror(listen_port=port)
-        else:
-            return 'invalid type given (valid values: simple, multi, mirror)\n'
-        obj.start()
-        myproxies[port] = {'obj': obj, 'type': type, 'desc': desc}
-        return "proxy successfully started on port %s\n" % port
-    else:
-        return 'port %s already in use\n' % port
+def representation_format(proxy):
+    r_proxy = {}
+    for key in proxy.keys():
+        if key != 'obj':
+            r_proxy[key] = proxy[key]
+    return r_proxy
 
-def kill_proxy(port=None):
+@api.route(baseroute, methods=['POST'])
+def start_proxy():
+    proxydef = request.get_json()
+    # Do some input sanitizing
+    # port
+    try:
+        assert proxydef['port'] in port_range
+        assert isinstance(proxydef['port'], int)
+    except AssertionError:
+        response = {'status': 'Error', 'msg': 'Allowed port range is %s - %s' % (min(port_range), max(port_range))}
+        return r(json.dumps(response), 422)
+    except KeyError:
+        response = {'status': 'Error', 'msg': 'No description specified'}
+        return r(json.dumps(response), 422)
+    # type
+    try:
+        assert proxydef['type'] in valid_types
+        assert isinstance(proxydef['type'], str)
+    except AssertionError:
+        response = {'status': 'Error', 'msg': 'Invalid type specified: %s' % proxydef['type']}
+        return r(json.dumps(response), 422)
+    except KeyError:
+        response = {'status': 'Error', 'msg': 'No description specified'}
+        return r(json.dumps(response), 422)
+    # description
+    try:
+        assert isinstance(proxydef['description'], str)
+    except AssertionError:
+        response = {'status': 'Error', 'msg': 'Invalid description specified'}
+        return r(json.dumps(response), 422)
+    except KeyError:
+        response = {'status': 'Error', 'msg': 'No description specified'}
+        return r(json.dumps(response), 422)
+    # Done input sanitizing
+    try:
+        myproxies[proxydef['port']]
+    except KeyError:
+        if proxydef['type'] == 'simple':
+            obj = proxies.SimpleProxy(listen_port=proxydef['port'])
+        elif proxydef['type'] == 'multi':
+            obj = proxies.MultiProxy(listen_port=proxydef['port'], send_port=proxydef['port']+5)
+        elif proxydef['type'] == 'mirror':
+            obj = proxies.Mirror(listen_port=proxydef['port'])
+        else:
+            response = {'status': 'Error', 'msg': 'An unknown error occurred'}
+            return r(json.dumps(response), 422)
+        obj.start()
+        myproxies[proxydef['port']] = {
+            'obj': obj,
+            'port': proxydef['port'],
+            'type': proxydef['type'],
+            'desc': proxydef['description']
+        }
+        response = {'status': 'OK', 'msg': 'Proxy successfully started'}
+        return r(json.dumps(response))
+    else:
+        response = {'status': 'Error', 'msg': 'Proxy already running on port %s' % proxydef['port']}
+        return r(json.dumps(response), 422)
+
+@api.route(baseroute + '<int:port>', methods=['DELETE'])
+def stop_proxy(port):
     try:
         myproxies[port]['obj'].stop()
         del myproxies[port]
-        return 'proxy on port %s successfully killed\n' % port
+        response = {'status': 'OK', 'msg': 'Proxy successfully stopped'}
+        return r(json.dumps(response))
     except KeyError:
-        return 'No proxy running on port %s\n' % port
+        response = {'status': 'OK', 'msg': 'Proxy is not running'}
+        return r(json.dumps(response))
 
+@api.route(baseroute, methods=['GET'])
 def list_proxies():
-    msg = ''
-    for port, proxy in list(myproxies.items()):
-        msg = msg + 'port=%s, type=%s, description="%s"\n' % (port, proxy['type'], proxy['desc'])
-    return msg
+    proxies = {}
+    for key in myproxies.keys():
+        proxies[key] = representation_format(myproxies[key])
+    return r(json.dumps(proxies))
 
-def main():
+@api.route(baseroute + '<int:port>', methods=['GET'])
+def get_proxy(port):
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('0.0.0.0', 5099))
-    except socket.error(msg):
-        sys.stderr.write("[ERROR] %s\n" % msg[1])
-        sys.exit(1)
-
-    while True:
-        data, addr = sock.recvfrom(65507)
-        data_serialized = data.decode()
-        cmd = data_serialized.split()
-        try:
-            cmd[0]
-        except KeyError:
-            msg = 'No command given\n'
-        else:
-            if cmd[0] == 'launch':
-                try:
-                    msg = launch_proxy(port=int(cmd[1]), type=cmd[2], desc=' '.join(cmd[3:]))
-                except ValueError:
-                    msg = 'given port is not a number\n'
-                except IndexError:
-                    msg = 'no port number given\n'
-            elif cmd[0] == 'kill':
-                try:
-                    msg = kill_proxy(port=int(cmd[1]))
-                except ValueError:
-                    msg = 'given port is not a number\n'
-                except IndexError:
-                    msg = 'no port number given\n'
-            elif cmd[0] == 'list':
-                msg = list_proxies()
-            else:
-                msg = 'Unkown command: %s\n' % cmd[0]
-        sock.sendto(msg.encode(), addr)
+        proxy = representation_format(myproxies[port])
+        return r(json.dumps(proxy))
+    except KeyError:
+        return r(json.dumps({'status': 'Error', 'msg': 'No proxy running on this port'}), 404)
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        for port in myproxies.keys():
-            myproxies[port]['obj'].stop()
-        sys.exit(0)
+    api.run(host='0.0.0.0', port=server_port)
