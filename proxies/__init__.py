@@ -1,3 +1,3 @@
-from proxies.udp_simple_proxy import (SimpleProxy)
-from proxies.udp_mirror       import (Mirror)
-from proxies.udp_multi_proxy  import (MultiProxy)
+from proxies.udp_one2onebi    import (One2OneBiProxy)
+from proxies.udp_mirror       import (MirrorProxy)
+from proxies.udp_one2manymo   import (One2ManyMoProxy)

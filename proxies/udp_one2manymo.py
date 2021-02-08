@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-simple-proxy: for 1-to-N connections
+udp_one2manymo: for 1-to-N connections
 """
 
 import socket
@@ -10,7 +10,7 @@ import sys
 import threading
 import time
 
-class MultiProxy(threading.Thread):
+class One2ManyMoProxy(threading.Thread):
     """
     Relays UDP packets from one source client to many sink clients. Sink clients
     are expected to send dummy packets in regular intervals to signal their presence.
@@ -18,7 +18,7 @@ class MultiProxy(threading.Thread):
     """
 
     def __init__(self, listen_port=None, send_port=None, listen_address='0.0.0.0', timeout=10):
-        super(MultiProxy, self).__init__()
+        super(One2ManyMoProxy, self).__init__()
         for port in [listen_port, send_port]:
             if not isinstance(port, int) or not  1024 <= port <= 65535:
                 raise ValueError('Specified port "%s" is invalid.' % port)
@@ -73,7 +73,7 @@ def main():
     try:
         source_port = int(sys.argv[1])
         sink_port = source_port + 5
-        proxy = MultiProxy(listen_port=source_port, send_port=sink_port)
+        proxy = One2ManyMoProxy(listen_port=source_port, send_port=sink_port)
         proxy.start()
         proxy.join()
     except KeyboardInterrupt:

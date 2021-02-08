@@ -10,14 +10,14 @@ import sys
 import threading
 import time
 
-class Mirror(threading.Thread):
+class MirrorProxy(threading.Thread):
     """
     Relays any incoming UDP packets back to the sender. Mainly useful for testing
     purposes.
     """
 
     def __init__(self, listen_port=None, listen_address='0.0.0.0'):
-        super(Mirror, self).__init__()
+        super(MirrorProxy, self).__init__()
         if not isinstance(listen_port, int) or not  1024 <= listen_port <= 65535:
             raise ValueError('Specified port "%s" is invalid.' % listen_port)
         try:
@@ -42,7 +42,7 @@ class Mirror(threading.Thread):
 
 def main():
     try:
-        proxy = Mirror(listen_port=int(sys.argv[1]))
+        proxy = MirrorProxy(listen_port=int(sys.argv[1]))
         proxy.start()
         proxy.join()
     except KeyboardInterrupt:

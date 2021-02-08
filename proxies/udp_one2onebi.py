@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-udp_simple_proxy: for 1-to-1 connections
+udp_one2onebi: for 1-to-1 connections
 """
 
 import socket
@@ -10,7 +10,7 @@ import sys
 import threading
 import time
 
-class SimpleProxy(threading.Thread):
+class One2OneBiProxy(threading.Thread):
     """
     Relays UDP packets between two endpoints. This allows two end-points
     behind NAT firewalls to communicate with each other by relaying their traffic
@@ -18,7 +18,7 @@ class SimpleProxy(threading.Thread):
     """
 
     def __init__(self, listen_port=None, listen_address='0.0.0.0'):
-        super(SimpleProxy, self).__init__()
+        super(One2OneBiProxy, self).__init__()
         if not isinstance(listen_port, int) or not  1024 <= listen_port <= 65535:
             raise ValueError('Specified port "%s" is invalid.' % listen_port)
         try:
@@ -57,7 +57,7 @@ class SimpleProxy(threading.Thread):
 
 def main():
     try:
-        proxy = SimpleProxy(listen_port=int(sys.argv[1]))
+        proxy = One2OneBiProxy(listen_port=int(sys.argv[1]))
         proxy.start()
         proxy.join()
     except KeyboardInterrupt:
