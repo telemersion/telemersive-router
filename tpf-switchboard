@@ -24,7 +24,7 @@ myproxies = {}
 
 port_range = range(10000, 32768)
 baseroute = '/proxies/'
-valid_types = ['mirror', 'one2onebi', 'one2manymo']
+valid_types = ['mirror', 'one2oneBi', 'one2manyMo']
 listen_port = 3591
 listen_address = '0.0.0.0'
 
@@ -78,9 +78,9 @@ def start_proxy():
         myproxies[proxydef['port']]
     except KeyError:
         try:
-            if proxydef['type'] == 'one2onebi':
+            if proxydef['type'] == 'one2oneBi':
                 obj = proxies.One2OneBiProxy(listen_port=proxydef['port'])
-            elif proxydef['type'] == 'one2manymo':
+            elif proxydef['type'] == 'one2manyMo':
                 obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], send_port=proxydef['port']+5)
             elif proxydef['type'] == 'mirror':
                 obj = proxies.MirrorProxy(listen_port=proxydef['port'])
