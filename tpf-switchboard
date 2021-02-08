@@ -22,10 +22,11 @@ from flask import Flask, json, Response, request
 # valid types: 'simple', 'multi', 'mirror'
 myproxies = {}
 
-port_range = range(10000, 20000)
+port_range = range(10000, 32768)
 baseroute = '/proxies/'
-valid_types = ['mirror', 'simple', 'multi']
-server_port = 8080
+valid_types = ['mirror', 'one2onebi', 'one2manymo']
+listen_port = 3591
+listen_address = '0.0.0.0'
 
 api = Flask(__name__)
 
@@ -76,24 +77,29 @@ def start_proxy():
     try:
         myproxies[proxydef['port']]
     except KeyError:
-        if proxydef['type'] == 'simple':
-            obj = proxies.SimpleProxy(listen_port=proxydef['port'])
-        elif proxydef['type'] == 'multi':
-            obj = proxies.MultiProxy(listen_port=proxydef['port'], send_port=proxydef['port']+5)
-        elif proxydef['type'] == 'mirror':
-            obj = proxies.Mirror(listen_port=proxydef['port'])
-        else:
-            response = {'status': 'Error', 'msg': 'An unknown error occurred'}
+        try:
+            if proxydef['type'] == 'one2onebi':
+                obj = proxies.One2OneBiProxy(listen_port=proxydef['port'])
+            elif proxydef['type'] == 'one2manymo':
+                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], send_port=proxydef['port']+5)
+            elif proxydef['type'] == 'mirror':
+                obj = proxies.MirrorProxy(listen_port=proxydef['port'])
+            else:
+                response = {'status': 'Error', 'msg': 'An unknown error occurred'}
+                return r(json.dumps(response), 422)
+        except OSError as err:
+            response = {'status': 'Error', 'msg': str(err)}
             return r(json.dumps(response), 422)
-        obj.start()
-        myproxies[proxydef['port']] = {
-            'obj': obj,
-            'port': proxydef['port'],
-            'type': proxydef['type'],
-            'desc': proxydef['description']
-        }
-        response = {'status': 'OK', 'msg': 'Proxy successfully started'}
-        return r(json.dumps(response))
+        else:
+            obj.start()
+            myproxies[proxydef['port']] = {
+                'obj': obj,
+                'port': proxydef['port'],
+                'type': proxydef['type'],
+                'desc': proxydef['description']
+            }
+            response = {'status': 'OK', 'msg': 'Proxy successfully started'}
+            return r(json.dumps(response))
     else:
         response = {'status': 'Error', 'msg': 'Proxy already running on port %s' % proxydef['port']}
         return r(json.dumps(response), 422)
@@ -125,4 +131,4 @@ def get_proxy(port):
         return r(json.dumps({'status': 'Error', 'msg': 'No proxy running on this port'}), 404)
 
 if __name__ == '__main__':
-    api.run(host='0.0.0.0', port=server_port)
+    api.run(host=listen_address, port=listen_port)
