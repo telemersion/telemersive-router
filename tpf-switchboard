@@ -73,6 +73,15 @@ def start_proxy():
     except KeyError:
         response = {'status': 'Error', 'msg': 'No description specified'}
         return r(json.dumps(response), 422)
+    # room
+    try:
+        assert isinstance(proxydef['room'], str)
+    except AssertionError:
+        response = {'status': 'Error', 'msg': 'Invalid room specified'}
+        return r(json.dumps(response), 422)
+    except KeyError:
+        response = {'status': 'Error', 'msg': 'No room specified'}
+        return r(json.dumps(response), 422)
     # Done input sanitizing
     try:
         myproxies[proxydef['port']]
@@ -96,7 +105,8 @@ def start_proxy():
                 'obj': obj,
                 'port': proxydef['port'],
                 'type': proxydef['type'],
-                'desc': proxydef['description']
+                'desc': proxydef['description'],
+                'room': proxydef['room']
             }
             response = {'status': 'OK', 'msg': 'Proxy successfully started'}
             return r(json.dumps(response))
@@ -129,6 +139,19 @@ def get_proxy(port):
         return r(json.dumps(proxy))
     except KeyError:
         return r(json.dumps({'status': 'Error', 'msg': 'No proxy running on this port'}), 404)
+
+@api.route('/rooms/', methods=['GET'])
+def get_proxies_grouped_by_room():
+    rooms = {myproxies[key]['room'] for key in myproxies.keys()}
+    all_rooms = {}
+    for room in rooms:
+        proxies_in_room = {}
+        for key in myproxies.keys():
+            if room == myproxies[key]['room']:
+                proxy = representation_format(myproxies[key])
+                proxies_in_room[myproxies[key]['port']] = proxy
+        all_rooms[room] = proxies_in_room
+    return r(json.dumps(all_rooms))
 
 if __name__ == '__main__':
     api.run(host=listen_address, port=listen_port)
