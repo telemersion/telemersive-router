@@ -40,6 +40,14 @@ def representation_format(proxy):
             r_proxy[key] = proxy[key]
     return r_proxy
 
+def get_proxies_of_room(room):
+    proxies_in_room = {}
+    for key in myproxies.keys():
+        if room == myproxies[key]['room']:
+            proxy = representation_format(myproxies[key])
+            proxies_in_room[myproxies[key]['port']] = proxy
+    return proxies_in_room
+
 @api.route(baseroute, methods=['POST'])
 def start_proxy():
     proxydef = request.get_json()
@@ -145,13 +153,19 @@ def get_proxies_grouped_by_room():
     rooms = {myproxies[key]['room'] for key in myproxies.keys()}
     all_rooms = {}
     for room in rooms:
-        proxies_in_room = {}
-        for key in myproxies.keys():
-            if room == myproxies[key]['room']:
-                proxy = representation_format(myproxies[key])
-                proxies_in_room[myproxies[key]['port']] = proxy
-        all_rooms[room] = proxies_in_room
+        proxies_of_room = get_proxies_of_room(room)
+        all_rooms[room] = proxies_of_room
     return r(json.dumps(all_rooms))
+
+@api.route('/rooms/' + '<string:room>', methods=['GET'])
+def get_proxies_of_room_http(room):
+    try:
+        assert room in {myproxies[key]['room'] for key in myproxies.keys()}
+    except AssertionError:
+        response = {'status': 'Error', 'msg': 'No such room found: %s' % room}
+        return r(json.dumps(response), 404)
+    proxies_of_room = get_proxies_of_room(room)
+    return r(json.dumps(proxies_of_room))
 
 if __name__ == '__main__':
     api.run(host=listen_address, port=listen_port)
