@@ -24,7 +24,7 @@ myproxies = {}
 
 port_range = range(10000, 32768)
 baseroute = '/proxies/'
-valid_types = ['mirror', 'one2oneBi', 'one2manyMo']
+valid_types = ['mirror', 'one2oneBi', 'one2manyMo', 'one2manyBi']
 listen_port = 3591
 listen_address = '0.0.0.0'
 
@@ -101,6 +101,8 @@ def start_proxy():
                 obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], send_port=proxydef['port']+5)
             elif proxydef['type'] == 'mirror':
                 obj = proxies.MirrorProxy(listen_port=proxydef['port'])
+            elif proxydef['type'] == 'one2manyBi':
+                obj = proxies.One2ManyBiProxy(one_port=proxydef['port'], many_port=proxydef['port']+5)
             else:
                 response = {'status': 'Error', 'msg': 'An unknown error occurred'}
                 return r(json.dumps(response), 422)
