@@ -41,12 +41,13 @@ class Many2ManyBiProxy(threading.Thread):
                 continue
             self.active_endpoints[my_addr] = time.time()
             if self.heartbeat_sequence != my_data[:len(self.heartbeat_sequence)]:
-                for addr in self.active_endpoints.keys():
-                    if addr != my_addr:
-                        if (self.active_endpoints[addr] + self.timeout) < time.time():
-                            del self.active_endpoints[addr]
-                        else:
-                            self.sock.sendto(my_data, addr)
+                other_clients = list(self.active_endpoints.keys())
+                other_clients.remove(my_addr)
+                for addr in other_clients:
+                    if (self.active_endpoints[addr] + self.timeout) < time.time():
+                        del self.active_endpoints[addr]
+                    else:
+                        self.sock.sendto(my_data, addr)
 
     def stop(self):
         self.kill_signal = True
