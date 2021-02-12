@@ -72,7 +72,7 @@ class One2ManyMoProxy(threading.Thread):
 def main():
     try:
         source_port = int(sys.argv[1])
-        sink_port = source_port + 5
+        sink_port = source_port + 1
         proxy = One2ManyMoProxy(listen_port=source_port, send_port=sink_port)
         proxy.start()
         proxy.join()

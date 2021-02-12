@@ -87,7 +87,7 @@ class One2ManyBiProxy(threading.Thread):
 def main():
     try:
         one_port = int(sys.argv[1])
-        many_port = one_port + 5
+        many_port = one_port + 1
         proxy = One2ManyBiProxy(one_port=one_port, many_port=many_port)
         proxy.start()
         proxy.join()
