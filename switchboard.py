@@ -28,7 +28,7 @@ valid_types = ['mirror', 'one2oneBi', 'one2manyMo', 'one2manyBi', 'many2manyBi']
 listen_port = 3591
 listen_address = '0.0.0.0'
 
-api = Flask(__name__)
+app = Flask(__name__)
 
 class r(Response):
     default_mimetype = 'application/json'
@@ -48,7 +48,7 @@ def get_proxies_of_room(room):
             proxies_in_room[myproxies[key]['port']] = proxy
     return proxies_in_room
 
-@api.route(baseroute, methods=['POST'])
+@app.route(baseroute, methods=['POST'])
 def start_proxy():
     proxydef = request.get_json()
     # Do some input sanitizing
@@ -126,7 +126,7 @@ def start_proxy():
         response = {'status': 'Error', 'msg': 'Proxy already running on port %s' % proxydef['port']}
         return r(json.dumps(response), 422)
 
-@api.route(baseroute + '<int:port>', methods=['DELETE'])
+@app.route(baseroute + '<int:port>', methods=['DELETE'])
 def stop_proxy(port):
     try:
         myproxies[port]['obj'].stop()
@@ -137,14 +137,14 @@ def stop_proxy(port):
         response = {'status': 'OK', 'msg': 'Proxy is not running'}
         return r(json.dumps(response))
 
-@api.route(baseroute, methods=['GET'])
+@app.route(baseroute, methods=['GET'])
 def list_proxies():
     proxies = {}
     for key in myproxies.keys():
         proxies[key] = representation_format(myproxies[key])
     return r(json.dumps(proxies))
 
-@api.route(baseroute + '<int:port>', methods=['GET'])
+@app.route(baseroute + '<int:port>', methods=['GET'])
 def get_proxy(port):
     try:
         proxy = representation_format(myproxies[port])
@@ -152,7 +152,7 @@ def get_proxy(port):
     except KeyError:
         return r(json.dumps({'status': 'Error', 'msg': 'No proxy running on this port'}), 404)
 
-@api.route('/rooms/', methods=['GET'])
+@app.route('/rooms/', methods=['GET'])
 def get_proxies_grouped_by_room():
     rooms = {myproxies[key]['room'] for key in myproxies.keys()}
     all_rooms = {}
@@ -161,7 +161,7 @@ def get_proxies_grouped_by_room():
         all_rooms[room] = proxies_of_room
     return r(json.dumps(all_rooms))
 
-@api.route('/rooms/' + '<string:room>', methods=['GET'])
+@app.route('/rooms/' + '<string:room>', methods=['GET'])
 def get_proxies_of_room_http(room):
     try:
         assert room in {myproxies[key]['room'] for key in myproxies.keys()}
@@ -172,4 +172,4 @@ def get_proxies_of_room_http(room):
     return r(json.dumps(proxies_of_room))
 
 if __name__ == '__main__':
-    api.run(host=listen_address, port=listen_port)
+    app.run(host=listen_address, port=listen_port)
