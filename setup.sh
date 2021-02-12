@@ -49,7 +49,7 @@ fi
 
 # create log directory
 hilite "Create log directory: '$LOG_DIR'"
-mkdir "$LOG_DIR" || errexit "Could not create log directory"
+mkdir -p "$LOG_DIR" || errexit "Could not create log directory"
 chown -R ${USER}:${USER} "$LOG_DIR" || errexit "Could not change owenership of log directory"
 
 SYSTEMD_UNIT_CONTENT="
