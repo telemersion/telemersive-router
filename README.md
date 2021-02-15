@@ -5,6 +5,9 @@ of UDP proxies. UDP proxies are way to establish UDP connections between
 clients from behind NAT firewalls. The UDP proxies support several
 connection topologies.
 
+It is written in [Python](https://www.python.org/) and uses the
+[flask](https://flask.palletsprojects.com/) framework.
+
 ## JSON API description
 
 ### Start a new proxy
@@ -89,7 +92,7 @@ curl \
 ```
 
 **NOTE**:  
-Since `DELETE` request should be treated in an idem-potent way, stopping
+Since `DELETE` requests should be treated in an idem-potent way, stopping
 an already stopped proxy is considered not an error.
 
 ### Return values
@@ -99,38 +102,34 @@ of the format:
 
 ```json
 {
-  "status": <Either 'Error' or 'OK'>,
-  "msg": <Some message describing the status>
+  "status": "<Either 'Error' or 'OK'>",
+  "msg": "<Some message describing the status>"
 }
 ```
 
 Depending on type of request and on status, different HTTP status codes are
-returned. HTTP status may be one of `200`, '201`, `404`, `422`.
+returned. HTTP status may be one of `200`, `201`, `404`, `422`.
 
 
 ## UDP proxy types
 
 ### mirror
-
 **mirror** mirrors incoming packets. This is useful for testing, for instance
 to test if the server port is reachable. Also, it can be used to test applications
 like UltraGrid when no second peer is available.
 
 ### one2oneBi
-
 **one2oneBi** establishes a connection between two endpoints. As soon as both endpoints
 have sent at least one packet, the script starts relaying incoming between clients. This
 script handles exactly one connetion with two endpoints.
 
 ### one2manyMo
-
 **one2manyMo** opens two listening socket, a source and a sink. It relays all incoming
 traffic from the source to all clients connected to the sink. Sink clients are requested
 to send at least one packet per second to signal their active connection. Packets from
 sink clients are discarded.
 
 ### one2manyBi
-
 **one2manyBi** establishes 1-to-N connections like **one2manyMo**, but additionally allows
 sink clients send packets to the source. Packets from source are forwarded to all active
 sink clients, packets from sink clients are forwarded to the source client. For keeping
@@ -143,6 +142,17 @@ are considered active as long as they send at least one packet per second. OSC p
 with an address `/hb` and no payload are discarded and may be used by clients to keep
 their connection alive without sending data.
 
+
+## Deployment
+
+The recommended way of running *tpf-switchboard* is to execute it under
+[gunicorn](https://gunicorn.org/). The included script `setup.sh` automates
+the process of setting up *tpf-switchboard* as a system service. The script
+is tested on *Debian* and *Ubuntu*. Run it as root:
+
+```bash
+./setup.sh
+```
 
 ## About
 
