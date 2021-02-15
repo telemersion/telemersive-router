@@ -16,7 +16,8 @@ from flask import Flask, json, Response, request
 #      4484: {
 #          'obj': <proxy_obj>,
 #          'type': 'simple',
-#          'description': 'Some description about the proxy'
+#          'description': 'Some description about the proxy',
+#          'room': 'Name of the room'
 #      }
 # }
 # valid types: 'simple', 'multi', 'mirror'
