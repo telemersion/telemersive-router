@@ -68,13 +68,13 @@ cURL examples:
 
 ```bash
 curl \
-  --requeset GET \
+  --request GET \
   http://localhost:3591/rooms/
 ```
 
 ```bash
 curl \
-  --requeset GET \
+  --request GET \
   http://localhost:3591/rooms/rehearsal
 ```
 
@@ -86,7 +86,7 @@ cURL example:
 
 ```bash
 curl \
-  --request DELETE
+  --request DELETE \
    http://localhost:3591/proxies/11000
 ```
 
@@ -147,6 +147,11 @@ is tested on *Debian* and *Ubuntu*. Run it as root:
 ```bash
 ./setup.sh
 ```
+
+### Logging
+The service logs accesses to `/var/log/tpf-swtichboard/access.log` and other
+messages to `/var/log/tpf-switchboard/error.log`.
+
 
 ## About
 
