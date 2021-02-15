@@ -161,3 +161,11 @@ Continuities in Telematic Performances". It's one element of our toolset to
 enable remote locations to create overlapping spaces on physical and virtual
 stages.
 
+## Authors
+
+  * Roman Haefeli <roman.haefeli@zhdk.ch>
+
+## License
+
+**GPL 3.0** (see [LICENSE.txt](LICENSE.txt))
+
