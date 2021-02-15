@@ -121,7 +121,7 @@ def start_proxy():
                 'room': proxydef['room']
             }
             response = {'status': 'OK', 'msg': 'Proxy successfully started'}
-            return r(json.dumps(response))
+            return r(json.dumps(response), 201)
     else:
         response = {'status': 'Error', 'msg': 'Proxy already running on port %s' % proxydef['port']}
         return r(json.dumps(response), 422)
