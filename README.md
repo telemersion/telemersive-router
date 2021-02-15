@@ -120,16 +120,16 @@ like UltraGrid when no second peer is available.
 have sent at least one packet, the script starts relaying incoming between clients. This
 script handles exactly one connetion with two endpoints.
 
-**one2manyMo** opens two listening socket, a source and a sink. It relays all incoming
-traffic from the source to all clients connected to the sink. Sink clients are requested
-to send at least one packet per second to signal their active connection. Packets from
-sink clients are discarded.
+**one2manyMo** opens two listening socket, a source and a sink. The sink port uses an offset
++1. It relays all incoming traffic from the source to all clients connected to the sink. Sink
+clients are requested to send at least one packet per second to signal their active connection.
+Packets from sink clients are discarded.
 
 **one2manyBi** establishes 1-to-N connections like **one2manyMo**, but additionally allows
-sink clients send packets to the source. Packets from source are forwarded to all active
-sink clients, packets from sink clients are forwarded to the source client. For keeping
-connections alive without forwarding any data, **one2manyBi** discards OSC packets with an
-address `/hb` and no payload.
+sink clients send packets to the source. The sink port uses an offset of 1. Packets from
+source are forwarded to all active sink clients, packets from sink clients are forwarded
+to the source client. For keeping connections alive without forwarding any data, **one2manyBi**
+discards OSC packets with an address `/hb` and no payload.
 
 **many2manyBi** relays incoming packets to all active clients but to to itself. Clients
 are considered active as long as they send at least one packet per second. OSC packets
