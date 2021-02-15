@@ -113,30 +113,25 @@ returned. HTTP status may be one of `200`, `201`, `404`, `422`.
 
 ## UDP proxy types
 
-### mirror
 **mirror** mirrors incoming packets. This is useful for testing, for instance
 to test if the server port is reachable. Also, it can be used to test applications
 like UltraGrid when no second peer is available.
 
-### one2oneBi
 **one2oneBi** establishes a connection between two endpoints. As soon as both endpoints
 have sent at least one packet, the script starts relaying incoming between clients. This
 script handles exactly one connetion with two endpoints.
 
-### one2manyMo
 **one2manyMo** opens two listening socket, a source and a sink. It relays all incoming
 traffic from the source to all clients connected to the sink. Sink clients are requested
 to send at least one packet per second to signal their active connection. Packets from
 sink clients are discarded.
 
-### one2manyBi
 **one2manyBi** establishes 1-to-N connections like **one2manyMo**, but additionally allows
 sink clients send packets to the source. Packets from source are forwarded to all active
 sink clients, packets from sink clients are forwarded to the source client. For keeping
 connections alive without forwarding any data, **one2manyBi** discards OSC packets with an
 address `/hb` and no payload.
 
-### many2manyBi
 **many2manyBi** relays incoming packets to all active clients but to to itself. Clients
 are considered active as long as they send at least one packet per second. OSC packets
 with an address `/hb` and no payload are discarded and may be used by clients to keep
