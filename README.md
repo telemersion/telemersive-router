@@ -1,6 +1,6 @@
 # tpf-switchboard
 
-tpf-switchboard is a service with a JSON API to manage different types
+*tpf-switchboard* is a service with a JSON API to manage different types
 of UDP proxies. UDP proxies are way to establish UDP connections between
 clients from behind NAT firewalls. The UDP proxies support several
 connection topologies.
@@ -28,7 +28,7 @@ An example of POST data:
 All four parameters `port`, `type`, `room`, and `description` are mandatory and must
 be specified. Omitting any of them causes an error.
 
-A working curl example for starting a new proxy:
+cURL example for starting a new proxy:
 
 ```bash
 curl \
@@ -42,11 +42,10 @@ curl \
 
 #### path `<base>/proxies/`
 
-Information about running proxies is gathered with HTTP `GET` requests. For an overview
-of all running proxies, a requet to `<base>/proxies/` is sent. For details of a specific
-proxy, a request to `<base>/proxies/<port>` is sent.
+Information about running proxies is gathered with a HTTP `GET` request to `<base>/proxies/`. For
+a specific proxy, use the proxy's specific path `<base>/proxies/<port>`.
 
-curl examples:
+cURL examples:
 
 ```bash
 curl \
@@ -65,7 +64,7 @@ curl \
 You can also request running proxies grouped by room through `<base>/rooms/`. Also, all
 proxies running in a specific room can be listed.
 
-Curl examples:
+cURL examples:
 
 ```bash
 curl \
@@ -83,7 +82,7 @@ curl \
 
 A running proxy is stopped with a HTTP `DELETE` request to the proxy's path.
 
-curl example:
+cURL example:
 
 ```bash
 curl \
@@ -151,8 +150,8 @@ is tested on *Debian* and *Ubuntu*. Run it as root:
 
 ## About
 
-tpf-switchboard is developed in the research project "Spatial Dis-/
-Continuities in Telematic Performances". It's one element of our toolset to
+*tpf-switchboard* is developed in the research project **Spatial Dis-/
+Continuities in Telematic Performances**. It is one element of our tool set to
 enable remote locations to create overlapping spaces on physical and virtual
 stages.
 
