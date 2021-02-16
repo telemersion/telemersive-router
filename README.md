@@ -36,7 +36,7 @@ To test the mosquitto broker it is possible to run it without service installati
 sudo systemctl start telemersion-broker.service
 
 # stop service 
-sudo systemctl start telemersion-broker.service
+sudo systemctl stop telemersion-broker.service
 
 # restart service
 sudo systemctl restart telemersion-broker.service
