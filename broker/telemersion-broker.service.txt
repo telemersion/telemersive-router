@@ -1,5 +1,5 @@
 [Unit]
-Description=Mosquitto Service for telemersive-server.
+Description=Mosquitto Service for telemersion-broker.
 
 # run after network is up
 Requires=network-online.target
