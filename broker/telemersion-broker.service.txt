@@ -1,0 +1,14 @@
+[Unit]
+Description=Mosquitto Service for telemersive-server.
+
+# run after network is up
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%COMMAND%
+User=%USER%
+
+[Install]
+WantedBy=multi-user.target
