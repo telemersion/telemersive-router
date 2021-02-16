@@ -24,6 +24,9 @@ useradd -s /usr/sbin/nologin -r -M $SERVICE_USER_NAME
 # grant access
 setfacl -R -m u:$SERVICE_USER_NAME:rwx "$SCRIPT_PATH"
 
+# set extra rights for log file
+chmod 777 broker/mosquitto.log
+
 # prepare service configuration form template
 echo "installing service..."
 RUN_SCRIPT_PATH="$SCRIPT_PATH/broker-run.sh"
