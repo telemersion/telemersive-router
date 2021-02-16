@@ -9,7 +9,7 @@ To install the telemersion server on an instance clone the github repository int
 git clone https://gitlab.zhdk.ch/iaspace/05_projects/telemersion-server
 ```
 
-### Mosquitto Broker Service
+### Mosquitto Broker Service
 
 To install the mosquitto broker as a service (Debian with systemd) use the following command:
 
@@ -21,7 +21,7 @@ tdb
 
 ## Usage
 
-### Mosquitto Broker
+### Mosquitto Broker
 
 To test the mosquitto broker it is possible to run it without service installation:
 
