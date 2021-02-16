@@ -53,3 +53,11 @@ sudo systemctl status telemersion-broker.service
 
 ### Manager
 tbd
+
+## Uninstall
+
+### Mosquitto Broker
+
+```bash
+sudo ./broker-service-uninstall.sh
+```
