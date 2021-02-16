@@ -15,6 +15,7 @@ source broker-service.cfg
 echo "installing msoquitto..."
 sudo apt update
 sudo apt install mosquitto -y
+sudo apt install acl -y
 
 # add user
 echo "adding service user..."
@@ -37,7 +38,11 @@ sudo mv $SERVICE_NAME.service "/etc/systemd/system/$SERVICE_NAME.service"
 echo "enabling service..."
 sudo systemctl enable $SERVICE_NAME.service
 
+echo ""
+echo ""
 echo "Please start your service now:"
 echo "sudo systemctl start $SERVICE_NAME.service"
+echo ""
+echo ""
 
 popd
