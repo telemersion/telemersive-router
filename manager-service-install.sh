@@ -23,6 +23,9 @@ useradd -s /usr/sbin/nologin -r -M $SERVICE_USER_NAME
 # grant access
 setfacl -R -m u:$SERVICE_USER_NAME:rwx "$SCRIPT_PATH"
 
+# install node packages
+npm install
+
 # prepare service configuration form template
 echo "installing service..."
 RUN_SCRIPT_PATH="$SCRIPT_PATH/broker-run.sh"
