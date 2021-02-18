@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "debug.js",
   "dependencies": {
+    "mqtt": "^4.2.6",
     "telemersive-bus": "0.0.16"
   },
   "scripts": {
