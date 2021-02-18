@@ -1,0 +1,14 @@
+[Unit]
+Description=Bus Manager Service for telemersion-manager.
+
+# run after network and telemersion-broker is up
+Requires=network-online.target telemersion-broker.service
+After=network-online.target telemersion-broker.service
+
+[Service]
+Type=simple
+ExecStart=%COMMAND%
+User=%USER%
+
+[Install]
+WantedBy=multi-user.target
