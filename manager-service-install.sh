@@ -15,10 +15,11 @@ source manager-service.cfg
 echo "installing msoquitto..."
 sudo apt update
 sudo apt install acl -y
-sudo apt install nodejs npm -y
 
-# update npm
-npm install npm@latest -g
+# installing node
+curl -fsSL https://deb.nodesource.com/setup_15.x | bash -
+sudo apt-get install -y nodejs
+sudo apt-get install gcc g++ make
 
 # add user
 echo "adding service user..."
