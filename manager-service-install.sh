@@ -15,6 +15,10 @@ source manager-service.cfg
 echo "installing msoquitto..."
 sudo apt update
 sudo apt install acl -y
+sudo apt install nodejs npm -y
+
+# update npm
+npm install npm@latest -g
 
 # add user
 echo "adding service user..."
@@ -29,7 +33,7 @@ npm install
 # prepare service configuration form template
 echo "installing service..."
 RUN_SCRIPT_PATH="$SCRIPT_PATH/broker-run.sh"
-cp "broker/$SERVICE_NAME.service.txt" "$SERVICE_NAME.service"
+cp "manager/$SERVICE_NAME.service.txt" "$SERVICE_NAME.service"
 
 sed -i -e "s~%COMMAND%~$RUN_SCRIPT_PATH~g" "$SERVICE_NAME.service"
 sed -i -e "s~%USER%~$SERVICE_USER_NAME~g" "$SERVICE_NAME.service"
