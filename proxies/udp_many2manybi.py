@@ -5,6 +5,7 @@
 udp_many2manybi: for N-to-N connections (OSC)
 """
 
+import logging
 import socket
 import sys
 import threading
@@ -17,7 +18,7 @@ class Many2ManyBiProxy(threading.Thread):
     alive.
     """
 
-    def __init__(self, listen_port=None, listen_address='0.0.0.0', timeout=10):
+    def __init__(self, listen_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
         super(Many2ManyBiProxy, self).__init__()
         if not isinstance(listen_port, int) or not  1024 <= listen_port <= 65535:
             raise ValueError('Specified port "%s" is invalid.' % port)
@@ -31,32 +32,39 @@ class Many2ManyBiProxy(threading.Thread):
         # key of dict is client's (address, port) tuple
         self.active_endpoints = {}
         self.timeout = timeout
+        self.logger = logger
         self.heartbeat_sequence = bytes([47, 104, 98, 0, 44, 0, 0, 0])
 
     def run(self):
         while not self.kill_signal:
             try:
-                my_data, my_addr = self.sock.recvfrom(65536)
-            except socket.timeout:
-                continue
-            self.active_endpoints[my_addr] = time.time()
-            if self.heartbeat_sequence != my_data[:len(self.heartbeat_sequence)]:
-                other_clients = list(self.active_endpoints.keys())
-                other_clients.remove(my_addr)
-                for addr in other_clients:
-                    if (self.active_endpoints[addr] + self.timeout) < time.time():
-                        del self.active_endpoints[addr]
-                    else:
-                        self.sock.sendto(my_data, addr)
+                try:
+                    my_data, my_addr = self.sock.recvfrom(65536)
+                except socket.timeout:
+                    continue
+                self.active_endpoints[my_addr] = time.time()
+                if self.heartbeat_sequence != my_data[:len(self.heartbeat_sequence)]:
+                    other_clients = list(self.active_endpoints.keys())
+                    other_clients.remove(my_addr)
+                    for addr in other_clients:
+                        if (self.active_endpoints[addr] + self.timeout) < time.time():
+                            del self.active_endpoints[addr]
+                        else:
+                            self.sock.sendto(my_data, addr)
+            except:
+                self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 
     def stop(self):
         self.kill_signal = True
         self.join()
 
 def main():
+    logger = logging.getLogger()
+    handler = logging.StreamHandler(sys.stderr)
+    logger.addHandler(handler)
     try:
         listen_port = int(sys.argv[1])
-        proxy = Many2ManyBiProxy(listen_port=listen_port)
+        proxy = Many2ManyBiProxy(listen_port=listen_port, logger=logger)
         proxy.start()
         proxy.join()
     except KeyboardInterrupt:
