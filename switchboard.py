@@ -127,7 +127,7 @@ def start_proxy():
                 'room': proxydef['room']
             }
             response = {'status': 'OK', 'msg': 'Proxy successfully started'}
-            app.logger.info('Proxy of type "%s" successfully started on port "%s"', proxydef['type'], proxydef['port'])
+            app.logger.info("Start proxy: '%s' '%s' '%s'", proxydef['port'], proxydef['type'], proxydef['room'])
             return r(json.dumps(response), 201)
     else:
         response = {'status': 'Error', 'msg': 'Proxy already running on port %s' % proxydef['port']}
@@ -138,7 +138,7 @@ def stop_proxy(port):
     try:
         myproxies[port]['obj'].stop()
         myproxies[port]['obj'].join()
-        app.logger.info('Proxy of type "%s" running on port "%s" successfully stopped', myproxies[port]['type'], port)
+        app.logger.info("Stop proxy:  '%s' '%s' '%s'", port, myproxies[port]['type'], myproxies[port]['room'])
         del myproxies[port]
         response = {'status': 'OK', 'msg': 'Proxy successfully stopped'}
         return r(json.dumps(response))
