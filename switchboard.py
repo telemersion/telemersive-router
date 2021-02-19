@@ -6,6 +6,7 @@ tpf-switchboard creates and destroys udp proxies dynamically on request.
 """
 
 import copy
+import logging
 import sys
 import time
 import proxies
@@ -30,6 +31,12 @@ listen_port = 3591
 listen_address = '0.0.0.0'
 
 app = Flask(__name__)
+
+app.logger.handlers = logging.getLogger('gunicorn.error').handlers
+#gunicorn_error_handlers = logging.getLogger('gunicorn.error').handlers
+#app.logger.handlers.extend(gunicorn_error_handlers )
+app.logger.setLevel(logging.INFO)
+app.config['PROPAGATE_EXCEPTIONS'] = True
 
 class r(Response):
     default_mimetype = 'application/json'
@@ -97,7 +104,7 @@ def start_proxy():
     except KeyError:
         try:
             if proxydef['type'] == 'one2oneBi':
-                obj = proxies.One2OneBiProxy(listen_port=proxydef['port'])
+                obj = proxies.One2OneBiProxy(listen_port=proxydef['port'], logger=app.logger)
             elif proxydef['type'] == 'one2manyMo':
                 obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], send_port=proxydef['port']+1)
             elif proxydef['type'] == 'mirror':
@@ -122,6 +129,7 @@ def start_proxy():
                 'room': proxydef['room']
             }
             response = {'status': 'OK', 'msg': 'Proxy successfully started'}
+            app.logger.info('Proxy of type "%s" successfully started on port "%s"', proxydef['type'], proxydef['port'])
             return r(json.dumps(response), 201)
     else:
         response = {'status': 'Error', 'msg': 'Proxy already running on port %s' % proxydef['port']}
@@ -131,6 +139,8 @@ def start_proxy():
 def stop_proxy(port):
     try:
         myproxies[port]['obj'].stop()
+        myproxies[port]['obj'].join()
+        app.logger.info('Proxy of type "%s" running on port "%s" successfully stopped', myproxies[port]['type'], port)
         del myproxies[port]
         response = {'status': 'OK', 'msg': 'Proxy successfully stopped'}
         return r(json.dumps(response))
