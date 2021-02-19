@@ -9,6 +9,7 @@ import socket
 import sys
 import threading
 import time
+import logging
 
 class One2OneBiProxy(threading.Thread):
     """
@@ -17,7 +18,7 @@ class One2OneBiProxy(threading.Thread):
     through a server with a public IP running this script.
     """
 
-    def __init__(self, listen_port=None, listen_address='0.0.0.0'):
+    def __init__(self, listen_port=None, listen_address='0.0.0.0', logger=None):
         super(One2OneBiProxy, self).__init__()
         if not isinstance(listen_port, int) or not  1024 <= listen_port <= 65535:
             raise ValueError('Specified port "%s" is invalid.' % listen_port)
@@ -28,36 +29,42 @@ class One2OneBiProxy(threading.Thread):
         except socket.error as msg:
             raise
         self.kill_signal = False
+        self.logger = logger
 
     def run(self):
         client1 = None
         client2 = None
         while not self.kill_signal:
             try:
-                data, addr = self.sock.recvfrom(65536)
-            except socket.timeout:
-                continue
+                try:
+                    data, addr = self.sock.recvfrom(65536)
+                except socket.timeout:
+                    continue
 
-            # Assigning clients
-            if addr != client1 and addr != client2:
-                client1 = client2
-                client2 = addr
+                # Assigning clients
+                if addr != client1 and addr != client2:
+                    client1 = client2
+                    client2 = addr
 
-            # transmit data
-            if client1 and client2:
-                if addr == client1:
-                    self.sock.sendto(data, client2)
-                elif addr == client2:
-                    self.sock.sendto(data, client1)
+                # transmit data
+                if client1 and client2:
+                    if addr == client1:
+                        self.sock.sendto(data, client2)
+                    elif addr == client2:
+                        self.sock.sendto(data, client1)
+            except:
+                self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 
     def stop(self):
         self.kill_signal = True
         self.join()
 
-
 def main():
+    logger = logging.getLogger()
+    handler = logging.StreamHandler(sys.stderr)
+    logger.addHandler(handler)
     try:
-        proxy = One2OneBiProxy(listen_port=int(sys.argv[1]))
+        proxy = One2OneBiProxy(listen_port=int(sys.argv[1]), logger=logger)
         proxy.start()
         proxy.join()
     except KeyboardInterrupt:
