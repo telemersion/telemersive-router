@@ -62,6 +62,7 @@ Type=simple
 ExecStart=/usr/bin/gunicorn3 \\
             --bind $LISTEN_ADDRESS:$LISTEN_PORT \\
             --chdir $APP_PATH \\
+	    --graceful-timeout 1 \\
             --access-logfile /var/log/tpf-switchboard/access.log \\
             --error-logfile /var/log/tpf-switchboard/error.log \\
             $APP_NAME:app
