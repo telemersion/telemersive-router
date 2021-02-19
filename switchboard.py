@@ -33,8 +33,6 @@ listen_address = '0.0.0.0'
 app = Flask(__name__)
 
 app.logger.handlers = logging.getLogger('gunicorn.error').handlers
-#gunicorn_error_handlers = logging.getLogger('gunicorn.error').handlers
-#app.logger.handlers.extend(gunicorn_error_handlers )
 app.logger.setLevel(logging.INFO)
 app.config['PROPAGATE_EXCEPTIONS'] = True
 
