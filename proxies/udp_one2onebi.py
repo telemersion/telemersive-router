@@ -5,11 +5,11 @@
 udp_one2onebi: for 1-to-1 connections
 """
 
+import logging
 import socket
 import sys
 import threading
 import time
-import logging
 
 class One2OneBiProxy(threading.Thread):
     """

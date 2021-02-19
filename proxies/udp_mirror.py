@@ -5,6 +5,7 @@
 udp_mirror: reflects udp packets to their origin
 """
 
+import logging
 import socket
 import sys
 import threading
@@ -16,7 +17,7 @@ class MirrorProxy(threading.Thread):
     purposes.
     """
 
-    def __init__(self, listen_port=None, listen_address='0.0.0.0'):
+    def __init__(self, listen_port=None, listen_address='0.0.0.0', logger=None):
         super(MirrorProxy, self).__init__()
         if not isinstance(listen_port, int) or not  1024 <= listen_port <= 65535:
             raise ValueError('Specified port "%s" is invalid.' % listen_port)
@@ -27,22 +28,29 @@ class MirrorProxy(threading.Thread):
         except socket.error as msg:
             raise
         self.kill_signal = False
+        self.logger = logger
 
     def run(self):
         while not self.kill_signal:
             try:
-                data, addr = self.sock.recvfrom(65536)
-            except socket.timeout:
-                continue
-            self.sock.sendto(data, addr)
+                try:
+                    data, addr = self.sock.recvfrom(65536)
+                except socket.timeout:
+                    continue
+                self.sock.sendto(data, addr)
+            except:
+                self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 
     def stop(self):
         self.kill_signal = True
         self.join()
 
 def main():
+    logger = logging.getLogger()
+    handler = logging.StreamHandler(sys.stderr)
+    logger.addHandler(handler)
     try:
-        proxy = MirrorProxy(listen_port=int(sys.argv[1]))
+        proxy = MirrorProxy(listen_port=int(sys.argv[1]), logger=logger)
         proxy.start()
         proxy.join()
     except KeyboardInterrupt:
