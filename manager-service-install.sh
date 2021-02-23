@@ -33,7 +33,7 @@ npm install
 
 # prepare service configuration form template
 echo "installing service..."
-RUN_SCRIPT_PATH="$SCRIPT_PATH/broker-run.sh"
+RUN_SCRIPT_PATH="$SCRIPT_PATH/manager-run.sh"
 cp "manager/$SERVICE_NAME.service.txt" "$SERVICE_NAME.service"
 
 sed -i -e "s~%COMMAND%~$RUN_SCRIPT_PATH~g" "$SERVICE_NAME.service"

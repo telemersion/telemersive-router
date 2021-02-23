@@ -20,3 +20,4 @@ npm install
 node busManager.js
 
 popd
+echo "manager closed"
