@@ -1,8 +1,8 @@
 [Unit]
-Description=Bus Manager Service for telemersion-manager.
+Description=Bus Manager Service for telemersive-manager.
 
-# run after network and telemersion-broker is up
-Requires=network-online.target telemersion-broker.service
+# run after network and telemersive-broker is up
+Requires=network-online.target telemersive-broker.service
 After=network-online.target telemersive-broker.service
 
 [Service]
