@@ -9,7 +9,7 @@ To install the telemersive router on an instance clone the github repository int
 git clone https://gitlab.zhdk.ch/iaspace/05_projects/telemersive-router
 ```
 
-Important for the installation is that
+Important for the installation is that first the broker is installed and second the manager.
 
 ### Broker
 
@@ -58,6 +58,7 @@ To update please first stop the service to not break the running service and lat
 To update to a newer version change to the manager directory and update the npm project:
 
 ```bash
+git pull
 cd manager
 npm install
 ```
