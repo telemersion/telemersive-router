@@ -28,9 +28,9 @@ sudo ./manager-service-install.sh
 
 ## Configuration
 
-### Broker
+### Change Credentials
 
-#### Change Credentials
+#### Broker
 
 ```bash
 cd broker
@@ -47,6 +47,22 @@ To encryp the passwords, run the following script:
 
 ```bash
 ./encrypt-userlist.sh
+```
+
+#### Manager
+
+```bash
+cd manager
+```
+
+Copy `access.js.template` to `access.js` and adjust credentials:
+
+```
+module.exports.broker_url = 'telemersive.zhdk.ch';
+module.exports.broker_port = 3883;
+module.exports.switch_port = 3591;
+module.exports.user = 'manager';
+module.exports.pwd = 'manager';
 ```
 
 ## Update
@@ -79,7 +95,7 @@ To test the mosquitto broker it is possible to run it without service installati
 # start service
 sudo systemctl start telemersive-broker.service
 
-# stop service 
+# stop service
 sudo systemctl stop telemersive-broker.service
 
 # restart service
@@ -109,7 +125,7 @@ To run the manager without the service use the following script:
 # start service
 sudo systemctl start telemersive-manager.service
 
-# stop service 
+# stop service
 sudo systemctl stop telemersive-manager.service
 
 # restart service

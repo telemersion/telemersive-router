@@ -1,0 +1,5 @@
+module.exports.broker_url = 'telemersive.zhdk.ch';
+module.exports.broker_port = 3883;
+module.exports.switch_port = 3591;
+module.exports.user = 'manager';
+module.exports.pwd = 'manager';
