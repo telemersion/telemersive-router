@@ -26,14 +26,11 @@ class One2ManyBiProxy(threading.Thread):
                 raise ValueError('Specified port "%s" is invalid.' % port)
         try:
             self.source = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self.source.settimeout(0.1)
             self.source.bind((listen_address, one_port))
         except socket.error as msg:
             raise
         try:
             self.sink = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            # Make socket non-blocking by setting timeout to 0
-            self.sink.settimeout(0)
             self.sink.bind((listen_address, many_port))
         except socket.error as msg:
             raise
