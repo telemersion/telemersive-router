@@ -6,12 +6,12 @@ udp_mirror: reflects udp packets to their origin
 """
 
 import logging
+import multiprocessing
 import socket
 import sys
-import threading
-import time
 
-class MirrorProxy(threading.Thread):
+
+class MirrorProxy(multiprocessing.Process):
     """
     Relays any incoming UDP packets back to the sender. Mainly useful for testing
     purposes.
@@ -27,11 +27,11 @@ class MirrorProxy(threading.Thread):
             self.sock.bind((listen_address, listen_port))
         except socket.error as msg:
             raise
-        self.kill_signal = False
+        self.kill_signal = multiprocessing.Value('i', False)
         self.logger = logger
 
     def run(self):
-        while not self.kill_signal:
+        while not self.kill_signal.value:
             try:
                 try:
                     data, addr = self.sock.recvfrom(65536)
@@ -42,7 +42,7 @@ class MirrorProxy(threading.Thread):
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 
     def stop(self):
-        self.kill_signal = True
+        self.kill_signal.value = True
         self.join()
 
 def main():
@@ -52,6 +52,7 @@ def main():
     try:
         proxy = MirrorProxy(listen_port=int(sys.argv[1]), logger=logger)
         proxy.start()
+        proxy.terminate()
         proxy.join()
     except KeyboardInterrupt:
         proxy.stop()

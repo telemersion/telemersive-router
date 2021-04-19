@@ -6,12 +6,12 @@ udp_one2manymo: for 1-to-N connections
 """
 
 import logging
+import multiprocessing
 import socket
 import sys
-import threading
 import time
 
-class One2ManyMoProxy(threading.Thread):
+class One2ManyMoProxy(multiprocessing.Process):
     """
     Relays UDP packets from one source client to many sink clients. Sink clients
     are expected to send dummy packets in regular intervals to signal their presence.
@@ -36,14 +36,14 @@ class One2ManyMoProxy(threading.Thread):
             self.sink.bind((listen_address, send_port))
         except socket.error as msg:
             raise
-        self.kill_signal = False
+        self.kill_signal = multiprocessing.Value('i', False)
         self.logger = logger
         # key of dict is sink_client's (address, port) tuple
         self.sink_clients = {}
         self.timeout = timeout
 
     def run(self):
-        while not self.kill_signal:
+        while not self.kill_signal.value:
             try:
                 # handle incoming packets from sink clients
                 while True:
@@ -71,7 +71,7 @@ class One2ManyMoProxy(threading.Thread):
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 
     def stop(self):
-        self.kill_signal = True
+        self.kill_signal.value = True
         self.join()
 
 def main():

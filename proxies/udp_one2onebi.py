@@ -6,12 +6,12 @@ udp_one2onebi: for 1-to-1 connections
 """
 
 import logging
+import multiprocessing
 import socket
 import sys
-import threading
-import time
 
-class One2OneBiProxy(threading.Thread):
+
+class One2OneBiProxy(multiprocessing.Process):
     """
     Relays UDP packets between two endpoints. This allows two end-points
     behind NAT firewalls to communicate with each other by relaying their traffic
@@ -28,13 +28,13 @@ class One2OneBiProxy(threading.Thread):
             self.sock.bind((listen_address, listen_port))
         except socket.error as msg:
             raise
-        self.kill_signal = False
+        self.kill_signal = multiprocessing.Value('i', False)
         self.logger = logger
 
     def run(self):
         client1 = None
         client2 = None
-        while not self.kill_signal:
+        while not self.kill_signal.value:
             try:
                 try:
                     data, addr = self.sock.recvfrom(65536)
@@ -56,7 +56,7 @@ class One2OneBiProxy(threading.Thread):
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 
     def stop(self):
-        self.kill_signal = True
+        self.kill_signal.value = True
         self.join()
 
 def main():
