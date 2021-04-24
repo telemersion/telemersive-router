@@ -25,12 +25,14 @@ class One2ManyMoProxy(multiprocessing.Process):
                 raise ValueError('Specified port "%s" is invalid.' % port)
         try:
             self.source = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.source.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.source.settimeout(0.1)
             self.source.bind((listen_address, listen_port))
         except socket.error as msg:
             raise
         try:
             self.sink = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sink.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             # Make socket non-blocking by setting timeout to 0
             self.sink.settimeout(0)
             self.sink.bind((listen_address, send_port))
