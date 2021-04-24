@@ -69,6 +69,9 @@ class One2ManyMoProxy(multiprocessing.Process):
                     self.sink.sendto(data, client)
             except:
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
+        
+        self.source.close()
+        self.sink.close()
 
     def stop(self):
         self.kill_signal.value = True
