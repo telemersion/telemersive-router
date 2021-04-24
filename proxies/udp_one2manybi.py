@@ -26,11 +26,13 @@ class One2ManyBiProxy(multiprocessing.Process):
                 raise ValueError('Specified port "%s" is invalid.' % port)
         try:
             self.source = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.source.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.source.bind((listen_address, one_port))
         except socket.error as msg:
             raise
         try:
             self.sink = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sink.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sink.bind((listen_address, many_port))
         except socket.error as msg:
             raise
@@ -81,6 +83,10 @@ class One2ManyBiProxy(multiprocessing.Process):
                         print('We should not ever reach that point')
             except:
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
+
+        self.source.close()
+        self.sink.close()
+
 
     def stop(self):
         self.kill_signal.value = True

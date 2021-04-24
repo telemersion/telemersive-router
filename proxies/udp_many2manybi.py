@@ -24,6 +24,7 @@ class Many2ManyBiProxy(multiprocessing.Process):
             raise ValueError('Specified port "%s" is invalid.' % listen_port)
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.settimeout(0.1)
             self.sock.bind((listen_address, listen_port))
         except socket.error as msg:
@@ -54,6 +55,10 @@ class Many2ManyBiProxy(multiprocessing.Process):
             except:
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 
+        self.source.close()
+        self.sink.close()
+
+                
     def stop(self):
         self.kill_signal.value = True
         self.join()
