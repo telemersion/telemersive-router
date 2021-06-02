@@ -66,7 +66,10 @@ class One2ManyBiProxy(multiprocessing.Process):
                             if (self.active_endpoints[one_addr] + self.timeout) < time.time():
                                 del self.active_endpoints[one_addr]
                             else:
-                                self.source.sendto(many_data, one_addr)
+                                try:
+                                    self.sink.sendto(many_data, one_addr)
+                                except BlockingIOError:
+                                    continue
                     elif sock.getsockname()[1] == self.one_port:
                         # one sends to many
                         one_data, one_addr = sock.recvfrom(65536)
@@ -78,7 +81,10 @@ class One2ManyBiProxy(multiprocessing.Process):
                                 if (self.active_endpoints[many_addr] + self.timeout) < time.time():
                                     del self.active_endpoints[many_addr]
                                 else:
-                                    self.sink.sendto(one_data, many_addr)
+                                    try:
+                                        self.sink.sendto(one_data, many_addr)
+                                    except BlockingIOError:
+                                        continue
                     else:
                         print('We should not ever reach that point')
             except:

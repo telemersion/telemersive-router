@@ -51,7 +51,10 @@ class Many2ManyBiProxy(multiprocessing.Process):
                         if (self.active_endpoints[addr] + self.timeout) < time.time():
                             del self.active_endpoints[addr]
                         else:
-                            self.sock.sendto(my_data, addr)
+                            try:
+                                self.sock.sendto(my_data, addr)
+                            except BlockingIOError:
+                                continue
             except:
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 

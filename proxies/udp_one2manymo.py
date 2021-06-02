@@ -68,7 +68,10 @@ class One2ManyMoProxy(multiprocessing.Process):
 
                 # send data to remaining sink_clients
                 for client in self.sink_clients.keys():
-                    self.sink.sendto(data, client)
+                    try:
+                        self.sink.sendto(data, client)
+                    except BlockingIOError:
+                        continue
             except:
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
         

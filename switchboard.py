@@ -104,13 +104,13 @@ def start_proxy():
             if proxydef['type'] == 'one2oneBi':
                 obj = proxies.One2OneBiProxy(listen_port=proxydef['port'], logger=app.logger)
             elif proxydef['type'] == 'one2manyMo':
-                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], send_port=proxydef['port']+1)
+                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], send_port=proxydef['port']+1, logger=app.logger)
             elif proxydef['type'] == 'mirror':
-                obj = proxies.MirrorProxy(listen_port=proxydef['port'])
+                obj = proxies.MirrorProxy(listen_port=proxydef['port'], logger=app.logger)
             elif proxydef['type'] == 'one2manyBi':
-                obj = proxies.One2ManyBiProxy(one_port=proxydef['port'], many_port=proxydef['port']+1)
+                obj = proxies.One2ManyBiProxy(one_port=proxydef['port'], many_port=proxydef['port']+1, logger=app.logger)
             elif proxydef['type'] == 'many2manyBi':
-                obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'])
+                obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger)
             else:
                 response = {'status': 'Error', 'msg': 'An unknown error occurred'}
                 return r(json.dumps(response), 422)

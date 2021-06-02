@@ -49,10 +49,13 @@ class One2OneBiProxy(multiprocessing.Process):
 
                 # transmit data
                 if client1 and client2:
-                    if addr == client1:
-                        self.sock.sendto(data, client2)
-                    elif addr == client2:
-                        self.sock.sendto(data, client1)
+                    try:
+                        if addr == client1:
+                            self.sock.sendto(data, client2)
+                        elif addr == client2:
+                            self.sock.sendto(data, client1)
+                    except BlockingIOError:
+                        continue
             except:
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
 
