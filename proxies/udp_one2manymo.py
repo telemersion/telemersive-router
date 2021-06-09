@@ -6,12 +6,12 @@ udp_one2manymo: for 1-to-N connections
 """
 
 import logging
+import multiprocessing
 import socket
 import sys
-import threading
 import time
 
-class One2ManyMoProxy(threading.Thread):
+class One2ManyMoProxy(multiprocessing.Process):
     """
     Relays UDP packets from one source client to many sink clients. Sink clients
     are expected to send dummy packets in regular intervals to signal their presence.
@@ -25,25 +25,27 @@ class One2ManyMoProxy(threading.Thread):
                 raise ValueError('Specified port "%s" is invalid.' % port)
         try:
             self.source = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.source.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.source.settimeout(0.1)
             self.source.bind((listen_address, listen_port))
         except socket.error as msg:
             raise
         try:
             self.sink = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sink.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             # Make socket non-blocking by setting timeout to 0
             self.sink.settimeout(0)
             self.sink.bind((listen_address, send_port))
         except socket.error as msg:
             raise
-        self.kill_signal = False
+        self.kill_signal = multiprocessing.Value('i', False)
         self.logger = logger
         # key of dict is sink_client's (address, port) tuple
         self.sink_clients = {}
         self.timeout = timeout
 
     def run(self):
-        while not self.kill_signal:
+        while not self.kill_signal.value:
             try:
                 # handle incoming packets from sink clients
                 while True:
@@ -66,12 +68,18 @@ class One2ManyMoProxy(threading.Thread):
 
                 # send data to remaining sink_clients
                 for client in self.sink_clients.keys():
-                    self.sink.sendto(data, client)
+                    try:
+                        self.sink.sendto(data, client)
+                    except BlockingIOError:
+                        continue
             except:
                 self.logger.exception('Oops, something went wrong!', extra={'stack': True})
+        
+        self.source.close()
+        self.sink.close()
 
     def stop(self):
-        self.kill_signal = True
+        self.kill_signal.value = True
         self.join()
 
 def main():
