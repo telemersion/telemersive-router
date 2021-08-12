@@ -67,7 +67,7 @@ class One2ManyBiProxy(multiprocessing.Process):
                                 del self.active_endpoints[one_addr]
                             else:
                                 try:
-                                    self.sink.sendto(many_data, one_addr)
+                                    self.source.sendto(many_data, one_addr)
                                 except BlockingIOError:
                                     continue
                     elif sock.getsockname()[1] == self.one_port:
