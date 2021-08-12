@@ -112,30 +112,25 @@ returned. HTTP status may be one of `200`, `201`, `404`, `422`.
 
 ## UDP proxy types
 
-**mirror** mirrors incoming packets. This is useful for testing, for instance
-to test if the server port is reachable. Also, it can be used to test applications
-like UltraGrid when no second peer is available.
+**mirror** mirrors incoming packets. This is useful for testing, for instance to test if the server port is reachable. Also, it can be used to test applications like UltraGrid when no second peer is available.
 
-**one2oneBi** establishes a connection between two endpoints. As soon as both endpoints
-have sent at least one packet, the script starts relaying incoming between clients. This
-script handles exactly one connetion with two endpoints.
+**one2oneBi** establishes a connection between two endpoints. As soon as both endpoints have sent at least one packet, the script starts relaying incoming between clients. This script handles exactly one connection with two endpoints.
 
-**one2manyMo** opens two listening socket, a source and a sink. The sink port uses an offset
-+1. It relays all incoming traffic from the source to all clients connected to the sink. Sink
-clients are requested to send at least one packet per second to signal their active connection.
+**one2manyMo** establishes 1-to-N connections and opens two listening socket, a source and a sink. The sink port uses an offset of
++1. It relays all incoming traffic from the source to all clients connected to the sink. Sink clients are requested to send at least one packet per second to indicate their active connection.
 Packets from sink clients are discarded.
 
 **one2manyBi** establishes 1-to-N connections like **one2manyMo**, but additionally allows
-sink clients send packets to the source. The sink port uses an offset of 1. Packets from
-source are forwarded to all active sink clients, packets from sink clients are forwarded
-to the source client. For keeping connections alive without forwarding any data, **one2manyBi**
-discards OSC packets with an address `/hb` and no payload.
+sink clients to send packets to the source. The sink port uses an offset of +1. Packets from
+source client are forwarded to all active sink clients, packets from sink clients are forwarded
+to the source client. Source AND Sink
+clients are requested to send at least one packet per second to indicate their active connection.
 
 **many2manyBi** relays incoming packets to all active clients but to to itself. Clients
-are considered active as long as they send at least one packet per second. OSC packets
-with an address `/hb` and no payload are discarded and may be used by clients to keep
-their connection alive without sending data.
+are considered active as long as they send at least one packet per second.
 
+**one2manyMo**, **one2manyBi** and **many2manyBi**
+On ports that require packets to indicate an active connection, these scripts also accept an OSC packet without a payload and the address `/hb` without forwarding this packet.
 
 ## Deployment
 
@@ -146,6 +141,14 @@ is tested on *Debian* and *Ubuntu*. Run it as root:
 
 ```bash
 ./setup.sh
+```
+
+### Stopping
+
+This works best if no proxies are open.
+
+```bash
+systemctl stop tpf-switchboard.service
 ```
 
 ### Logging
@@ -162,9 +165,16 @@ stages.
 
 ## Authors
 
-  * Roman Haefeli <roman.haefeli@zhdk.ch>
+Main contribution:
+* Roman Haefeli <roman.haefeli@zhdk.ch>
+
+Programming:
+* Martin Froehlich <martin.froehlich@zhdk.ch>
+* Florian Bruggisser <florian.bruggisser@zhdk.ch>
+
+Bug Fixing:
+* Joel Gähwiler <joel.gaehwiler@gmail.com>
 
 ## License
 
 **GPL 3.0** (see [LICENSE.txt](LICENSE.txt))
-
