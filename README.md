@@ -1,8 +1,6 @@
-# tpf-switchboard
+# Telemersive Switchboard
 
-*tpf-switchboard* is a service with a JSON API to manage different types
-of UDP proxies. UDP proxies are way to establish UDP connections between
-clients from behind NAT firewalls. The UDP proxies support several
+*Telemersive Switchboard* is a service with a JSON API to manage different types of UDP proxies. UDP proxies are way to establish UDP connections between clients from behind NAT firewalls. The UDP proxies support several
 connection topologies.
 
 It is written in [Python](https://www.python.org/) and uses the
@@ -134,10 +132,7 @@ On ports that require packets to indicate an active connection, these scripts al
 
 ## Deployment
 
-The recommended way of running *tpf-switchboard* is to execute it under
-[gunicorn](https://gunicorn.org/). The included script `setup.sh` automates
-the process of setting up *tpf-switchboard* as a system service. The script
-is tested on *Debian* and *Ubuntu*. Run it as root:
+The recommended way of running *Telemersive Switchboard* is to execute it under [gunicorn](https://gunicorn.org/). The included script `setup.sh` automates the process of setting up Telemersive Switchboard* as a system service. The script is tested on *Debian* and *Ubuntu*. Run it as root:
 
 ```bash
 ./setup.sh
@@ -148,20 +143,16 @@ is tested on *Debian* and *Ubuntu*. Run it as root:
 This works best if no proxies are open.
 
 ```bash
-systemctl stop tpf-switchboard.service
+systemctl stop telemersive-switchboard.service
 ```
 
 ### Logging
-The service logs accesses to `/var/log/tpf-swtichboard/access.log` and other
-messages to `/var/log/tpf-switchboard/error.log`.
+The service logs accesses to `/var/log/telemersive-swtichboard/access.log` and other messages to `/var/log/telemersive-switchboard/error.log`.
 
 
 ## About
 
-*tpf-switchboard* is developed in the research project **Spatial Dis-/
-Continuities in Telematic Performances**. It is one element of our tool set to
-enable remote locations to create overlapping spaces on physical and virtual
-stages.
+*Telemersive Switchboard* is developed in the research project **Spatial Dis-/Continuities in Telematic Performances**. It is one element of our tool set to enable remote locations to create overlapping spaces on physical and virtualstages.
 
 ## Authors
 
