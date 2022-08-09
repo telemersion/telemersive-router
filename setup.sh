@@ -1,10 +1,10 @@
 #!/bin/bash
 
-USER="tpf-switchboard"
+USER="telemersive-switchboard"
 APP_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 APP_NAME="switchboard"
-SERVICE_NAME="tpf-switchboard"
-LOG_DIR="/var/log/tpf-switchboard"
+SERVICE_NAME="telemersive-switchboard"
+LOG_DIR="/var/log/telemersive-switchboard"
 LISTEN_PORT=3591
 LISTEN_ADDRESS="0.0.0.0"
 
@@ -54,7 +54,7 @@ chown -R ${USER}:${USER} "$LOG_DIR" || errexit "Could not change owenership of l
 
 SYSTEMD_UNIT_CONTENT="
 [Unit]
-Description=tpf-switchboard - manager for udp proxies
+Description=telemersive-switchboard - manager for udp proxies
 After=syslog.target
 
 [Service]
@@ -63,8 +63,8 @@ ExecStart=/usr/bin/gunicorn3 \\
             --bind $LISTEN_ADDRESS:$LISTEN_PORT \\
             --chdir $APP_PATH \\
 	    --graceful-timeout 1 \\
-            --access-logfile /var/log/tpf-switchboard/access.log \\
-            --error-logfile /var/log/tpf-switchboard/error.log \\
+            --access-logfile /var/log/telemersive-switchboard/access.log \\
+            --error-logfile /var/log/telemersive-switchboard/error.log \\
             $APP_NAME:app
 User=$USER
 Group=$USER
