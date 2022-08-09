@@ -1,12 +1,17 @@
 # Telemersive Router
 
-Telemersive Router that contains an telemersive-broker and the telemersive-manager.
+*Telemersive Router* contains the telemersive-broker and the telemersive-manager.
+
+The third component of the *Telemersive Router*, the telemersive-switchboard, is maintained in a different [repo](https://gitlab.zhdk.ch/telemersion/telemersive-switchboard).
 
 ## Installation
-To install the telemersive router on an instance clone the github repository into the installation directory (for example `/opt/telemersive-router`).
+
+Install first the [telemersive-switchboard](https://gitlab.zhdk.ch/telemersion/telemersive-switchboard).
+
+To install the *Telemersive Router* on an instance clone the github repository into the installation directory (for example `/opt/telemersive-router`).
 
 ```
-git clone https://gitlab.zhdk.ch/iaspace/05_projects/telemersive-router
+git clone https://gitlab.zhdk.ch/telemersion/telemersive-router
 ```
 
 Important for the installation is that first the broker is installed and second the manager.
