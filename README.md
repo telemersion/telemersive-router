@@ -4,6 +4,14 @@
 
 The third component of the *Telemersive Router*, the telemersive-switchboard, is maintained in a different [repo](https://gitlab.zhdk.ch/telemersion/telemersive-switchboard).
 
+## Requirement
+
+* nodejs needs to be available
+
+```
+apt install nodejs
+```
+
 ## Installation
 
 Install first the [telemersive-switchboard](https://gitlab.zhdk.ch/telemersion/telemersive-switchboard).
