@@ -134,8 +134,8 @@ def start_proxy():
             obj.start()
             myproxies[proxydef['port']] = {
                 'obj': obj,
-                'port': proxydef['port'],
-                'many_port': many_port,
+                'source-port': proxydef['port'],
+                'sink-port': many_port,
                 'type': proxydef['type'],
                 'desc': proxydef['description'],
                 'room': proxydef['room']
