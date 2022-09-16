@@ -19,15 +19,15 @@ class One2ManyBiProxy(multiprocessing.Process):
     Different ports are used for source and sink clients.
     """
 
-    def __init__(self, one_port=None, many_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
+    def __init__(self, listen_port=None, many_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
         super(One2ManyBiProxy, self).__init__()
-        for port in [one_port, many_port]:
+        for port in [listen_port, many_port]:
             if not isinstance(port, int) or not  1024 <= port <= 65535:
                 raise ValueError('Specified port "%s" is invalid.' % port)
         try:
             self.source = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.source.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.source.bind((listen_address, one_port))
+            self.source.bind((listen_address, listen_port))
         except socket.error as msg:
             raise
         try:
@@ -42,7 +42,7 @@ class One2ManyBiProxy(multiprocessing.Process):
         self.active_endpoints = {}
         self.timeout = timeout
         self.heartbeat_sequence = bytes([47, 104, 98, 0, 44, 0, 0, 0])
-        self.one_port = one_port
+        self.listen_port = listen_port
         self.many_port = many_port
 
     def run(self):
@@ -70,7 +70,7 @@ class One2ManyBiProxy(multiprocessing.Process):
                                     self.source.sendto(many_data, one_addr)
                                 except BlockingIOError:
                                     continue
-                    elif sock.getsockname()[1] == self.one_port:
+                    elif sock.getsockname()[1] == self.listen_port:
                         # one sends to many
                         one_data, one_addr = sock.recvfrom(65536)
                         self.active_endpoints[one_addr] = time.time()
@@ -103,9 +103,9 @@ def main():
     handler = logging.StreamHandler(sys.stderr)
     logger.addHandler(handler)
     try:
-        one_port = int(sys.argv[1])
-        many_port = one_port + 1
-        proxy = One2ManyBiProxy(one_port=one_port, many_port=many_port, logger=logger)
+        listen_port = int(sys.argv[1])
+        many_port = listen_port + 1
+        proxy = One2ManyBiProxy(listen_port=listen_port, many_port=many_port, logger=logger)
         proxy.start()
         proxy.join()
     except KeyboardInterrupt:

@@ -68,6 +68,19 @@ def start_proxy():
     except KeyError:
         response = {'status': 'Error', 'msg': 'No description specified'}
         return r(json.dumps(response), 422)
+    # many_port is not mandatory for all proxies
+    many_port = proxydef['port']
+    if 'many_port' in proxydef:
+        try:
+            assert proxydef['many_port'] in port_range
+            assert isinstance(proxydef['many_port'], int)
+        except AssertionError:
+            response = {'status': 'Error', 'msg': 'Allowed many_port range is %s - %s' % (min(port_range), max(port_range))}
+            return r(json.dumps(response), 422)
+        except KeyError:
+            response = {'status': 'Error', 'msg': 'No description specified'}
+            return r(json.dumps(response), 422)
+        many_port = proxydef['many_port']
     # type
     try:
         assert proxydef['type'] in valid_types
@@ -101,14 +114,14 @@ def start_proxy():
         myproxies[proxydef['port']]
     except KeyError:
         try:
-            if proxydef['type'] == 'one2oneBi':
+            if proxydef['type'] == 'mirror':
+                obj = proxies.MirrorProxy(listen_port=proxydef['port'], logger=app.logger)
+            elif proxydef['type'] == 'one2oneBi':
                 obj = proxies.One2OneBiProxy(listen_port=proxydef['port'], logger=app.logger)
             elif proxydef['type'] == 'one2manyMo':
-                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], send_port=proxydef['port']+1, logger=app.logger)
-            elif proxydef['type'] == 'mirror':
-                obj = proxies.MirrorProxy(listen_port=proxydef['port'], logger=app.logger)
+                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
             elif proxydef['type'] == 'one2manyBi':
-                obj = proxies.One2ManyBiProxy(one_port=proxydef['port'], many_port=proxydef['port']+1, logger=app.logger)
+                obj = proxies.One2ManyBiProxy(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
             elif proxydef['type'] == 'many2manyBi':
                 obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger)
             else:
@@ -122,6 +135,7 @@ def start_proxy():
             myproxies[proxydef['port']] = {
                 'obj': obj,
                 'port': proxydef['port'],
+                'many_port': many_port,
                 'type': proxydef['type'],
                 'desc': proxydef['description'],
                 'room': proxydef['room']

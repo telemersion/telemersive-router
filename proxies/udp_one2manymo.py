@@ -18,9 +18,9 @@ class One2ManyMoProxy(multiprocessing.Process):
     Different ports are used for source and sink clients.
     """
 
-    def __init__(self, listen_port=None, send_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
+    def __init__(self, listen_port=None, many_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
         super(One2ManyMoProxy, self).__init__()
-        for port in [listen_port, send_port]:
+        for port in [listen_port, many_port]:
             if not isinstance(port, int) or not  1024 <= port <= 65535:
                 raise ValueError('Specified port "%s" is invalid.' % port)
         try:
@@ -35,7 +35,7 @@ class One2ManyMoProxy(multiprocessing.Process):
             self.sink.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             # Make socket non-blocking by setting timeout to 0
             self.sink.settimeout(0)
-            self.sink.bind((listen_address, send_port))
+            self.sink.bind((listen_address, many_port))
         except socket.error as msg:
             raise
         self.kill_signal = multiprocessing.Value('i', False)
@@ -89,7 +89,7 @@ def main():
     try:
         source_port = int(sys.argv[1])
         sink_port = source_port + 1
-        proxy = One2ManyMoProxy(listen_port=source_port, send_port=sink_port, logger=logger)
+        proxy = One2ManyMoProxy(listen_port=source_port, many_port=sink_port, logger=logger)
         proxy.start()
         proxy.join()
     except KeyboardInterrupt:
