@@ -1,0 +1,11 @@
+[Unit]
+Description=nat-helper for UltraGrid peer-to-peer connections
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%COMMAND% -p %PORT%
+User=%USER%
+
+[Install]
+WantedBy=multi-user.target
