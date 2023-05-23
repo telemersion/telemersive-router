@@ -66,7 +66,7 @@ def start_proxy():
         response = {'status': 'Error', 'msg': 'Allowed port range is %s - %s' % (min(port_range), max(port_range))}
         return r(json.dumps(response), 422)
     except KeyError:
-        response = {'status': 'Error', 'msg': 'No description specified'}
+        response = {'status': 'Error', 'msg': 'No port specified'}
         return r(json.dumps(response), 422)
     # many_port is not mandatory for all proxies
     many_port = proxydef['port']
@@ -78,7 +78,7 @@ def start_proxy():
             response = {'status': 'Error', 'msg': 'Allowed many_port range is %s - %s' % (min(port_range), max(port_range))}
             return r(json.dumps(response), 422)
         except KeyError:
-            response = {'status': 'Error', 'msg': 'No description specified'}
+            response = {'status': 'Error', 'msg': 'No many_port specified'}
             return r(json.dumps(response), 422)
         many_port = proxydef['many_port']
     # type
@@ -89,7 +89,7 @@ def start_proxy():
         response = {'status': 'Error', 'msg': 'Invalid type specified: %s' % proxydef['type']}
         return r(json.dumps(response), 422)
     except KeyError:
-        response = {'status': 'Error', 'msg': 'No description specified'}
+        response = {'status': 'Error', 'msg': 'No type specified'}
         return r(json.dumps(response), 422)
     # description
     try:
