@@ -23,7 +23,6 @@ class OpenStageControl:
         if not isinstance(osc_port, int) or not  1024 <= osc_port <= 65535:
             raise ValueError('Specified osc_port "%s" is invalid.' % osc_port)
         self.cmd = f"/usr/bin/node /usr/lib/open-stage-control/resources/app/ --port {http_port} --osc-port {osc_port} --no-qrcode"
-        self.cmd = f"/usr/bin/nc -v -l -n -p {http_port}"
         self.logger = logger
         self.p = None
 
