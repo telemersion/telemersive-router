@@ -37,11 +37,11 @@ class OpenStageControl:
         if isinstance(self.p, subprocess.Popen):
             self.p.send_signal(signal.SIGINT)
         self.p = None
-        self.logger.info(p.communicate())
+        self.logger.info(self.p.communicate())
 
     def join(self):
         self.p.wait()
-        self.logger.info(p.communicate())
+        self.logger.info(self.p.communicate())
 
     def terminate(self):
         return
