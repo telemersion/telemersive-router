@@ -26,7 +26,7 @@ myproxies = {}
 
 port_range = range(10000, 32768)
 baseroute = '/proxies/'
-valid_types = ['mirror', 'one2oneBi', 'one2manyMo', 'one2manyBi', 'many2manyBi']
+valid_types = ['mirror', 'one2oneBi', 'one2manyMo', 'one2manyBi', 'many2manyBi', 'OpenStageControl']
 listen_port = 3591
 listen_address = '0.0.0.0'
 
@@ -124,6 +124,8 @@ def start_proxy():
                 obj = proxies.One2ManyBiProxy(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
             elif proxydef['type'] == 'many2manyBi':
                 obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger)
+            elif proxydef['type'] == 'OpenStageControl':
+                obj = proxies.OpenStageControl(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
             else:
                 response = {'status': 'Error', 'msg': 'An unknown error occurred'}
                 return r(json.dumps(response), 422)
