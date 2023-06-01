@@ -125,7 +125,7 @@ def start_proxy():
             elif proxydef['type'] == 'many2manyBi':
                 obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger)
             elif proxydef['type'] == 'OpenStageControl':
-                obj = proxies.OpenStageControl(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
+                obj = proxies.OpenStageControl(http_port=proxydef['port'], osc_port=many_port, logger=app.logger)
             else:
                 response = {'status': 'Error', 'msg': 'An unknown error occurred'}
                 return r(json.dumps(response), 422)
