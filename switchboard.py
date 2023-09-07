@@ -51,7 +51,7 @@ def get_proxies_of_room(room):
     for key in myproxies.keys():
         if room == myproxies[key]['room']:
             proxy = representation_format(myproxies[key])
-            proxies_in_room[myproxies[key]['port']] = proxy
+            proxies_in_room[key] = proxy
     return proxies_in_room
 
 @app.route(baseroute, methods=['POST'])
