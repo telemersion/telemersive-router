@@ -43,10 +43,11 @@ class One2ManyMoProxy(multiprocessing.Process):
         # key of dict is sink_client's (address, port) tuple
         self.sink_clients = {}
         self.timeout = timeout
+        self.listen_port = listen_port
 
     def run(self):
-        while not self.kill_signal.value:
-            try:
+        try:
+            while not self.kill_signal.value:
                 # handle incoming packets from sink clients
                 while True:
                     try:
@@ -72,9 +73,10 @@ class One2ManyMoProxy(multiprocessing.Process):
                         self.sink.sendto(data, client)
                     except BlockingIOError:
                         continue
-            except:
-                self.logger.exception('Oops, something went wrong!', extra={'stack': True})
-        
+        except (KeyboardInterrupt, SystemExit):
+            self.logger.warning(f'Shutting down proxy on {self.listen_port}')
+        except:
+            self.logger.exception('Oops, something went wrong!', extra={'stack': True})
         self.source.close()
         self.sink.close()
 
@@ -88,11 +90,14 @@ def main():
     logger.addHandler(handler)
     try:
         source_port = int(sys.argv[1])
-        sink_port = source_port + 1
+        try:
+            sink_port = int(sys.argv[2])
+        except IndexError:
+            sink_port = source_port + 1
         proxy = One2ManyMoProxy(listen_port=source_port, many_port=sink_port, logger=logger)
         proxy.start()
         proxy.join()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         proxy.stop()
         sys.exit(0)
 
