@@ -29,14 +29,15 @@ class One2OneBiProxy(multiprocessing.Process):
             self.sock.bind((listen_address, listen_port))
         except socket.error as msg:
             raise
+        self.port = listen_port
         self.kill_signal = multiprocessing.Value('i', False)
         self.logger = logger
 
     def run(self):
-        client1 = None
-        client2 = None
-        while not self.kill_signal.value:
-            try:
+        try:
+            client1 = None
+            client2 = None
+            while not self.kill_signal.value:
                 try:
                     data, addr = self.sock.recvfrom(65536)
                 except socket.timeout:
@@ -56,9 +57,10 @@ class One2OneBiProxy(multiprocessing.Process):
                             self.sock.sendto(data, client1)
                     except BlockingIOError:
                         continue
-            except:
-                self.logger.exception('Oops, something went wrong!', extra={'stack': True})
-
+        except (KeyboardInterrupt, SystemExit):
+            self.logger.warning(f'Shutting down proxy on {self.port}')
+        except:
+            self.logger.exception('Oops, something went wrong!', extra={'stack': True})
         self.sock.close()
 
     def stop(self):
@@ -73,7 +75,7 @@ def main():
         proxy = One2OneBiProxy(listen_port=int(sys.argv[1]), logger=logger)
         proxy.start()
         proxy.join()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         proxy.stop()
         sys.exit(0)
 
