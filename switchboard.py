@@ -196,5 +196,14 @@ def get_proxies_of_room_http(room):
     proxies_of_room = get_proxies_of_room(room)
     return r(json.dumps(proxies_of_room))
 
+def main():
+    try:
+        app.run(host=listen_address, port=listen_port)
+    except KeyboardInterrupt:
+        for port in myproxies.keys():
+            myproxies[port]['obj'].stop()
+            myproxies[port]['obj'].join()
+        sys.exit(0)
+
 if __name__ == '__main__':
-    app.run(host=listen_address, port=listen_port)
+    main()
