@@ -21,7 +21,6 @@ from flask import Flask, json, Response, request
 #          'room': 'Name of the room'
 #      }
 # }
-# valid types: 'simple', 'multi', 'mirror'
 myproxies = {}
 
 port_range = range(10000, 32768)
@@ -31,10 +30,13 @@ listen_port = 3591
 listen_address = '0.0.0.0'
 
 app = Flask(__name__)
-
-app.logger.handlers = logging.getLogger('gunicorn.error').handlers
-app.logger.setLevel(logging.INFO)
 app.config['PROPAGATE_EXCEPTIONS'] = True
+app.logger.setLevel(logging.INFO)
+
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
 
 class r(Response):
     default_mimetype = 'application/json'
@@ -69,7 +71,7 @@ def start_proxy():
         response = {'status': 'Error', 'msg': 'No port specified'}
         return r(json.dumps(response), 422)
     # many_port is not mandatory for all proxies
-    many_port = proxydef['port']
+    many_port = proxydef['port'] + 1
     if 'many_port' in proxydef:
         try:
             assert proxydef['many_port'] in port_range
