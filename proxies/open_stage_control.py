@@ -22,16 +22,31 @@ class OpenStageControl:
             raise ValueError('Specified http_port "%s" is invalid.' % http_port)
         if not isinstance(osc_port, int) or not  1024 <= osc_port <= 65535:
             raise ValueError('Specified osc_port "%s" is invalid.' % osc_port)
-        self.cmd = f"/usr/bin/node /usr/lib/open-stage-control/resources/app/ --port {http_port} --osc-port {osc_port} --no-qrcode"
+        self.cmd = [
+            '/usr/bin/node',
+            '/usr/lib/open-stage-control/resources/app/',
+            '--port',
+            http_port,
+            '--osc-port',
+            osc_port,
+            '--no-qrcode'
+        ]
+
         self.logger = logger
         self.p = None
+
+    def prepare_sesssion_file(self):
+        # TODO
+        pass
 
     def start(self):
         try:
             assert self.p is None
         except:
             self.logger.exception('This instance is already running', extra={'stack': True})
-        self.p = subprocess.Popen(self.cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        session_path = self.prepare_session_file(self)
+        self.cmd.extend(['--load', session_path])
+        self.p = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     def stop(self):
         if isinstance(self.p, subprocess.Popen):
