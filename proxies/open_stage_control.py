@@ -50,6 +50,7 @@ class OpenStageControl:
     def prepare_session_file(self):
         session_dir = f'{OSC_DEFAULT_SESSION_PATH}/{self.session_name}'
         self.session_path = f'{session_dir}/default.json'
+        template_session = f'{OSC_DEFAULT_SESSION_PATH}/template.json'
         if not os.path.exists(session_dir):
             try:
                 os.mkdir(session_dir)
@@ -59,9 +60,9 @@ class OpenStageControl:
                 self.logger.exception(error)
                 self.session_path = None
                 return
-            default_session = f'{OSC_DEFAULT_SESSION_PATH}/template.json'
+        if not os.path.exists(self.session_path):
             try:
-                os.system(f'cp {default_session} {self.session_path}')
+                os.system(f'cp {template_session} {self.session_path}')
             except OSError as error:
                 self.logger.exception('Could not copy template to session '
                     'directory')
