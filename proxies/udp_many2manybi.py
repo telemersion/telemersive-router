@@ -13,9 +13,9 @@ import time
 
 class Many2ManyBiProxy(multiprocessing.Process):
     """
-    Relays UDP packets between many endpoints. Incoming packets are forwarded to all other
-    endpoints (not to itself). OSC messages '/hb' are not forwarded, but keep connection
-    alive.
+    Relays UDP packets between many endpoints. Incoming packets are forwarded
+    to all other endpoints (not to itself). The OSC messages '/hb' is not
+    forwarded, but keeps connection alive.
     """
 
     def __init__(self, listen_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
@@ -49,7 +49,8 @@ class Many2ManyBiProxy(multiprocessing.Process):
                     other_clients = list(self.active_endpoints.keys())
                     other_clients.remove(my_addr)
                     for addr in other_clients:
-                        if (self.active_endpoints[addr] + self.timeout) < time.time():
+                        if (addr[0] != '127.0.0.1') and
+                            (self.active_endpoints[addr] + self.timeout) < time.time():
                             del self.active_endpoints[addr]
                         else:
                             try:
