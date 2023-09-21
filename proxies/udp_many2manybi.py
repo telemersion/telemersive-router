@@ -49,8 +49,8 @@ class Many2ManyBiProxy(multiprocessing.Process):
                     other_clients = list(self.active_endpoints.keys())
                     other_clients.remove(my_addr)
                     for addr in other_clients:
-                        if (addr[0] != '127.0.0.1') and
-                            (self.active_endpoints[addr] + self.timeout) < time.time():
+                        if ((addr[0] != '127.0.0.1') and
+                            (self.active_endpoints[addr] + self.timeout)) < time.time():
                             del self.active_endpoints[addr]
                         else:
                             try:
