@@ -15,8 +15,8 @@ import subprocess
 import signal
 import sys
 
-#OSC_DEFAULT_SESSION_PATH = '/opt/open-stage-control/sessions/tsb_sessions'
-OSC_DEFAULT_SESSION_PATH = '/home/roman/pd-src/tsb_sessions'
+OSC_DEFAULT_SESSION_PATH = '/opt/open-stage-control/sessions/tsb_sessions'
+#OSC_DEFAULT_SESSION_PATH = '/home/roman/pd-src/tsb_sessions'
 
 # port: http port
 # many-port: many2manyBi proxy
