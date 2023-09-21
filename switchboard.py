@@ -121,13 +121,16 @@ def start_proxy():
             elif proxydef['type'] == 'one2oneBi':
                 obj = proxies.One2OneBiProxy(listen_port=proxydef['port'], logger=app.logger)
             elif proxydef['type'] == 'one2manyMo':
-                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
+                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], many_port=many_port,
+                        logger=app.logger)
             elif proxydef['type'] == 'one2manyBi':
-                obj = proxies.One2ManyBiProxy(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
+                obj = proxies.One2ManyBiProxy(listen_port=proxydef['port'], many_port=many_port,
+                        logger=app.logger)
             elif proxydef['type'] == 'many2manyBi':
                 obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger)
             elif proxydef['type'] == 'OpenStageControl':
-                obj = proxies.OpenStageControl(http_port=proxydef['port'], osc_port=many_port, logger=app.logger)
+                obj = proxies.OpenStageControl(http_port=proxydef['port'], many_port=many_port,
+                        session=proxydef['room'], logger=app.logger)
             else:
                 response = {'status': 'Error', 'msg': 'An unknown error occurred'}
                 return r(json.dumps(response), 422)
