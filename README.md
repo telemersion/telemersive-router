@@ -127,8 +127,38 @@ clients are requested to send at least one packet per second to indicate their a
 **many2manyBi** relays incoming packets to all active clients but to to itself. Clients
 are considered active as long as they send at least one packet per second.
 
+**OpenStageControl** is not a proxy module, but starts and stops an instance of an [Open Stage Control](https://openstagecontrol.ammd.net/docs/getting-started/introduction/) server. `port` specifies the listening port for the webserver, `many_port` specifies the destination UDP port for OSC messages. See section below for more detailed documentation about setting up and using OpenStageControl.
+
+#### Note
 **one2manyMo**, **one2manyBi** and **many2manyBi**
 On ports that require packets to indicate an active connection, these scripts also accept an OSC packet without a payload and the address `/hb` without forwarding this packet.
+
+## Open Stage Control
+### Installation
+OpenStageControl installation is not covered by the setup script below. However, installation is trivial:
+
+1. `sudo apt install gdebi-core wget`
+2. `wget "https://github.com/jean-emmanuel/open-stage-control/releases/download/v1.25.5/open-stage-control_1.25.5_amd64.deb"`
+3. `sudo gdebi open-stage-control_1.25.5_amd64.deb`
+
+### Setup for use in telemersive-switchboard
+When an instance of the `OpenStageControl` module is started, it automatically creates a folder named after the room and copies
+a default session to that new folder. Thus, we need to make sure the folder exists and the user OpenStageControl runs under has
+access to it:
+
+1. `sudo mkdir -p /opt/open-stage-control/sessions/tsb_sessions`
+2. `sudo chown -R telemersive-switchboard:telemersive-switchboard /opt/open-stage-control/sessions`
+
+We also need to create a template session that is automatically loaded in a new room and save it under this path:  
+`/opt/open-stage-control/sessions/tsb_sessions/template.json`
+
+### Interaction with OSC clients
+By the use of a `many2manyBi` proxy, we can send OSC events generated in OpenStageControl to many OSC clients. In return,
+many OSC clients can send OSC messages to OpenStageControl. telemersive-switchboard does not autamically start a `many2manyBi`
+proxy when launching an instance of `OpenStageControl`. For this to work, `port` of `many2manyBi` must be set to `many_port`
+of `OpenStageControl`. The telemersive-gateway automatically sets up a proxy for OSC message relaying when starting an
+instance of `OpenStageControl`.
+
 
 ## Deployment
 
