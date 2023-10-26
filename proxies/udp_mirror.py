@@ -26,22 +26,24 @@ class MirrorProxy(multiprocessing.Process):
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.settimeout(0.1)
             self.sock.bind((listen_address, listen_port))
+            self.port = listen_port
         except socket.error as msg:
             raise
         self.kill_signal = multiprocessing.Value('i', False)
         self.logger = logger
 
     def run(self):
-        while not self.kill_signal.value:
-            try:
+        try:
+            while not self.kill_signal.value:
                 try:
                     data, addr = self.sock.recvfrom(65536)
                 except socket.timeout:
                     continue
                 self.sock.sendto(data, addr)
-            except:
-                self.logger.exception('Oops, something went wrong!', extra={'stack': True})
-
+        except (KeyboardInterrupt, SystemExit):
+            self.logger.warning(f'Shutting down proxy on {self.port}')
+        except:
+            self.logger.exception('Oops, something went wrong!', extra={'stack': True})
         self.sock.close()
 
     def stop(self):
@@ -55,9 +57,8 @@ def main():
     try:
         proxy = MirrorProxy(listen_port=int(sys.argv[1]), logger=logger)
         proxy.start()
-        proxy.terminate()
         proxy.join()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         proxy.stop()
         sys.exit(0)
 

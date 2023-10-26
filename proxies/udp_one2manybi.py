@@ -46,9 +46,9 @@ class One2ManyBiProxy(multiprocessing.Process):
         self.many_port = many_port
 
     def run(self):
-        listening_sockets = [self.source, self.sink]
-        while not self.kill_signal.value:
-            try:
+        try:
+            listening_sockets = [self.source, self.sink]
+            while not self.kill_signal.value:
                 readables, _w, _x = select.select(listening_sockets, [], [], 0.1)
                 for sock in readables:
                     if sock.getsockname()[1] == self.many_port:
@@ -87,12 +87,12 @@ class One2ManyBiProxy(multiprocessing.Process):
                                         continue
                     else:
                         print('We should not ever reach that point')
-            except:
-                self.logger.exception('Oops, something went wrong!', extra={'stack': True})
-
+        except (KeyboardInterrupt, SystemExit):
+            self.logger.warning(f'Shutting down proxy on {self.listen_port}')
+        except:
+            self.logger.exception('Oops, something went wrong!', extra={'stack': True})
         self.source.close()
         self.sink.close()
-
 
     def stop(self):
         self.kill_signal.value = True
@@ -104,11 +104,14 @@ def main():
     logger.addHandler(handler)
     try:
         listen_port = int(sys.argv[1])
-        many_port = listen_port + 1
+        try:
+            many_port = int(sys.argv[2])
+        except IndexError:
+            many_port = listen_port + 1
         proxy = One2ManyBiProxy(listen_port=listen_port, many_port=many_port, logger=logger)
         proxy.start()
         proxy.join()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         proxy.stop()
         sys.exit(0)
 

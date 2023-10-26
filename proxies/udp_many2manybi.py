@@ -13,9 +13,9 @@ import time
 
 class Many2ManyBiProxy(multiprocessing.Process):
     """
-    Relays UDP packets between many endpoints. Incoming packets are forwarded to all other
-    endpoints (not to itself). OSC messages '/hb' are not forwarded, but keep connection
-    alive.
+    Relays UDP packets between many endpoints. Incoming packets are forwarded
+    to all other endpoints (not to itself). The OSC messages '/hb' is not
+    forwarded, but keeps connection alive.
     """
 
     def __init__(self, listen_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
@@ -27,6 +27,7 @@ class Many2ManyBiProxy(multiprocessing.Process):
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.settimeout(0.1)
             self.sock.bind((listen_address, listen_port))
+            self.port = listen_port
         except socket.error as msg:
             raise
         self.kill_signal = multiprocessing.Value('i', False)
@@ -37,8 +38,8 @@ class Many2ManyBiProxy(multiprocessing.Process):
         self.heartbeat_sequence = bytes([47, 104, 98, 0, 44, 0, 0, 0])
 
     def run(self):
-        while not self.kill_signal.value:
-            try:
+        try:
+            while not self.kill_signal.value:
                 try:
                     my_data, my_addr = self.sock.recvfrom(65536)
                 except socket.timeout:
@@ -48,20 +49,21 @@ class Many2ManyBiProxy(multiprocessing.Process):
                     other_clients = list(self.active_endpoints.keys())
                     other_clients.remove(my_addr)
                     for addr in other_clients:
-                        if (self.active_endpoints[addr] + self.timeout) < time.time():
+                        if ((addr[0] != '127.0.0.1') and
+                            (self.active_endpoints[addr] + self.timeout) <
+                            time.time()):
                             del self.active_endpoints[addr]
                         else:
                             try:
                                 self.sock.sendto(my_data, addr)
                             except BlockingIOError:
                                 continue
-            except:
-                self.logger.exception('Oops, something went wrong!', extra={'stack': True})
+        except (KeyboardInterrupt, SystemExit):
+            self.logger.warning(f'Shutting down proxy on {self.port}')
+        except:
+            self.logger.exception('Oops, something went wrong!', extra={'stack': True})
+        self.sock.close()
 
-        self.source.close()
-        self.sink.close()
-
-                
     def stop(self):
         self.kill_signal.value = True
         self.join()

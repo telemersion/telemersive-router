@@ -21,20 +21,22 @@ from flask import Flask, json, Response, request
 #          'room': 'Name of the room'
 #      }
 # }
-# valid types: 'simple', 'multi', 'mirror'
 myproxies = {}
 
 port_range = range(10000, 32768)
 baseroute = '/proxies/'
-valid_types = ['mirror', 'one2oneBi', 'one2manyMo', 'one2manyBi', 'many2manyBi']
+valid_types = ['mirror', 'one2oneBi', 'one2manyMo', 'one2manyBi', 'many2manyBi', 'OpenStageControl']
 listen_port = 3591
 listen_address = '0.0.0.0'
 
 app = Flask(__name__)
-
-app.logger.handlers = logging.getLogger('gunicorn.error').handlers
-app.logger.setLevel(logging.INFO)
 app.config['PROPAGATE_EXCEPTIONS'] = True
+app.logger.setLevel(logging.INFO)
+
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
 
 class r(Response):
     default_mimetype = 'application/json'
@@ -51,7 +53,7 @@ def get_proxies_of_room(room):
     for key in myproxies.keys():
         if room == myproxies[key]['room']:
             proxy = representation_format(myproxies[key])
-            proxies_in_room[myproxies[key]['port']] = proxy
+            proxies_in_room[key] = proxy
     return proxies_in_room
 
 @app.route(baseroute, methods=['POST'])
@@ -66,10 +68,10 @@ def start_proxy():
         response = {'status': 'Error', 'msg': 'Allowed port range is %s - %s' % (min(port_range), max(port_range))}
         return r(json.dumps(response), 422)
     except KeyError:
-        response = {'status': 'Error', 'msg': 'No description specified'}
+        response = {'status': 'Error', 'msg': 'No port specified'}
         return r(json.dumps(response), 422)
     # many_port is not mandatory for all proxies
-    many_port = proxydef['port']
+    many_port = proxydef['port'] + 1
     if 'many_port' in proxydef:
         try:
             assert proxydef['many_port'] in port_range
@@ -78,7 +80,7 @@ def start_proxy():
             response = {'status': 'Error', 'msg': 'Allowed many_port range is %s - %s' % (min(port_range), max(port_range))}
             return r(json.dumps(response), 422)
         except KeyError:
-            response = {'status': 'Error', 'msg': 'No description specified'}
+            response = {'status': 'Error', 'msg': 'No many_port specified'}
             return r(json.dumps(response), 422)
         many_port = proxydef['many_port']
     # type
@@ -89,7 +91,7 @@ def start_proxy():
         response = {'status': 'Error', 'msg': 'Invalid type specified: %s' % proxydef['type']}
         return r(json.dumps(response), 422)
     except KeyError:
-        response = {'status': 'Error', 'msg': 'No description specified'}
+        response = {'status': 'Error', 'msg': 'No type specified'}
         return r(json.dumps(response), 422)
     # description
     try:
@@ -119,11 +121,16 @@ def start_proxy():
             elif proxydef['type'] == 'one2oneBi':
                 obj = proxies.One2OneBiProxy(listen_port=proxydef['port'], logger=app.logger)
             elif proxydef['type'] == 'one2manyMo':
-                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
+                obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], many_port=many_port,
+                        logger=app.logger)
             elif proxydef['type'] == 'one2manyBi':
-                obj = proxies.One2ManyBiProxy(listen_port=proxydef['port'], many_port=many_port, logger=app.logger)
+                obj = proxies.One2ManyBiProxy(listen_port=proxydef['port'], many_port=many_port,
+                        logger=app.logger)
             elif proxydef['type'] == 'many2manyBi':
                 obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger)
+            elif proxydef['type'] == 'OpenStageControl':
+                obj = proxies.OpenStageControl(http_port=proxydef['port'], many_port=many_port,
+                        session=proxydef['room'], logger=app.logger)
             else:
                 response = {'status': 'Error', 'msg': 'An unknown error occurred'}
                 return r(json.dumps(response), 422)
@@ -194,5 +201,14 @@ def get_proxies_of_room_http(room):
     proxies_of_room = get_proxies_of_room(room)
     return r(json.dumps(proxies_of_room))
 
+def main():
+    try:
+        app.run(host=listen_address, port=listen_port)
+    except KeyboardInterrupt:
+        for port in myproxies.keys():
+            myproxies[port]['obj'].stop()
+            myproxies[port]['obj'].join()
+        sys.exit(0)
+
 if __name__ == '__main__':
-    app.run(host=listen_address, port=listen_port)
+    main()
