@@ -27,7 +27,7 @@ function errexit {
 
 # are we root?
 hilite "Check whether we are root."
-[ "$(whoami)" == "root" ] || errexit "We are not running as root. Exiting now." 
+[ "$(whoami)" == "root" ] || errexit "We are not running as root. Exiting now."
 
 # Install install stuff
 hilite "Make sure deb packages are installed"
@@ -55,11 +55,13 @@ mkdir -p "$LOG_DIR" || errexit "Could not create log directory"
 chown -R ${USER}:${USER} "$LOG_DIR" || errexit "Could not change owenership of log directory"
 
 #  install open-stage-control
+hilite "Install open-stage-control"
 wget "$OSC_DEB" -O /tmp/openstagecontrol.deb || errexit "Couldn't download open-stage-control as deb package"
 gdebi --n /tmp/openstagecontrol.deb  || errexit "Couldn't install open-stage-control from deb"
 rm /tmp/openstagecontrol.deb || errexit "Couldn't remove /tmp/openstagecontrol.deb"
 
 # install default session file (template.json)
+hilite "Install default session for new rooms (template.json)"
 cp files/template.json "$HOME" || errexit "Couln't copy template.json to ~/."
 chown ${USER}:${USER} "${HOME}/template.json"  || errexit  "Couldn't  change owner for template.json"
 
