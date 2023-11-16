@@ -1,7 +1,7 @@
 #!/bin/bash
 
 USER="telemersive-switchboard"
-HOME="/opt/open-stage-control/sessions/tsb_sessions/"
+HOME="/opt/open-stage-control/sessions/tsb_sessions"
 APP_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 APP_NAME="switchboard"
 SERVICE_NAME="telemersive-switchboard"
@@ -59,6 +59,9 @@ wget "$OSC_DEB" -O /tmp/openstagecontrol.deb || errexit "Couldn't download open-
 gdebi --n /tmp/openstagecontrol.deb  || errexit "Couldn't install open-stage-control from deb"
 rm /tmp/openstagecontrol.deb || errexit "Couldn't remove /tmp/openstagecontrol.deb"
 
+# install default session file (template.json)
+cp files/template.json "$HOME" || errexit "Couln't copy template.json to ~/."
+chown ${USER}:${USER} "${HOME}/template.json"  || errexit  "Couldn't  change owner for template.json"
 
 SYSTEMD_UNIT_CONTENT="
 [Unit]
