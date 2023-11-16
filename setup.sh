@@ -41,7 +41,7 @@ fi
 hilite "Add user '$USER' to the system"
 if ! id -u "$USER" > /dev/null 2>&1
 then
-  useradd -r -s /usr/sbin/nologin -d "$HOME" -k $USER || errexit "Failed to add user '$USER'"
+  useradd -r -s /usr/sbin/nologin -d "$HOME" -m $USER || errexit "Failed to add user '$USER'"
 fi
 
 # prepare home
