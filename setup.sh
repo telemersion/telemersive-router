@@ -1,6 +1,7 @@
 #!/bin/bash
 
 USER="telemersive-switchboard"
+HOME="/opt/open-stage-control/sessions/tsb_sessions/"
 APP_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 APP_NAME="switchboard"
 SERVICE_NAME="telemersive-switchboard"
@@ -44,8 +45,13 @@ fi
 hilite "Add user '$USER' to the system"
 if ! id -u "$USER" > /dev/null 2>&1
 then
-  useradd -r -s /usr/sbin/nologin $USER || errexit "Failed to add user '$USER'"
+  useradd -r -s /usr/sbin/nologin -d "$HOME" -k $USER || errexit "Failed to add user '$USER'"
 fi
+
+# prepare home
+hilite "Prepare Home"
+mkdir -p "${HOME}/.config" || errexit "Failed to create ~/.config for user"
+chown -R ${USER}:${USER} "$HOME" || errexit " Failed change owner"
 
 # create log directory
 hilite "Create log directory: '$LOG_DIR'"
