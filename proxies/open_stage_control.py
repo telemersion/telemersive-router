@@ -40,7 +40,9 @@ class OpenStageControl:
             f'{http_port}',
             '--send',
             f'127.0.0.1:{osc_port}',
-            '--no-qrcode'
+            '--no-qrcode',
+            '--authentication',
+            f'{session}:{session}'
         ]
         self.session_name=session if session else 'default'
 
