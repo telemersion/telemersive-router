@@ -74,6 +74,8 @@ ExecStart=/usr/bin/gunicorn3 \\
             $APP_NAME:app
 User=$USER
 Group=$USER
+KillMode=mixed
+TimeoutStopSec=10s
 
 [Install]
 WantedBy=multi-user.target
