@@ -6,7 +6,7 @@ open_stage_control: runs an open stage control server on specified ports
 
 For UDP transmission between OpenStageControl and many UDP clients to
 work, the OSC server connects to a many2manyBi proxy that is assumed to
-be already running on the port specified by the many_port parameter.
+be already running on the port specified by the osc_port parameter.
 """
 
 import logging
@@ -28,18 +28,18 @@ class OpenStageControl:
     one instance of this.
     """
 
-    def __init__(self, http_port=None, many_port=None, session=None, logger=None):
+    def __init__(self, http_port=None, osc_port=None, session=None, logger=None):
         if not isinstance(http_port, int) or not  1024 <= http_port <= 65535:
             raise ValueError('Specified http_port "%s" is invalid.' % http_port)
-        if not isinstance(many_port, int) or not  1024 <= many_port <= 65535:
-            raise ValueError('Specified many_port "%s" is invalid.' % many_port)
+        if not isinstance(osc_port, int) or not  1024 <= osc_port <= 65535:
+            raise ValueError('Specified osc_port "%s" is invalid.' % osc_port)
         self.cmd = [
             '/usr/bin/node',
             '/usr/lib/open-stage-control/resources/app/',
             '--port',
             f'{http_port}',
             '--send',
-            f'127.0.0.1:{many_port}',
+            f'127.0.0.1:{osc_port}',
             '--no-qrcode'
         ]
         self.session_name=session if session else 'default'
