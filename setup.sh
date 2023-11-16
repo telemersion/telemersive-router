@@ -8,6 +8,8 @@ SERVICE_NAME="telemersive-switchboard"
 LOG_DIR="/var/log/telemersive-switchboard"
 LISTEN_PORT=3591
 LISTEN_ADDRESS="0.0.0.0"
+DEB_PKGS="python3-flask gunicorn3 gdebi-core wget"
+OSC_DEB="https://github.com/jean-emmanuel/open-stage-control/releases/download/v1.25.5/open-stage-control_1.25.5_amd64.deb"
 
 function hilite {
   echo -ne "\033[32m"
@@ -27,19 +29,13 @@ function errexit {
 hilite "Check whether we are root."
 [ "$(whoami)" == "root" ] || errexit "We are not running as root. Exiting now." 
 
-# Install flask
-hilite "Make sure flask is installed"
+# Install install stuff
+hilite "Make sure deb packages are installed"
 if ! which flask > /dev/null
 then
-  apt-get install python3-flask || errexit "Failed to install python3-flask"
+  apt-get install -y $DEB_PKGS || errexit ""
 fi
 
-# Install gunicorn3
-hilite "Make sure gunicorn3 is installed"
-if ! which gunicorn3 > /dev/null
-then
-  apt-get install gunicorn3 || errexit "Failed to install gunicorn3"
-fi
 
 # add user to the system
 hilite "Add user '$USER' to the system"
@@ -57,6 +53,12 @@ chown -R ${USER}:${USER} "$HOME" || errexit " Failed change owner"
 hilite "Create log directory: '$LOG_DIR'"
 mkdir -p "$LOG_DIR" || errexit "Could not create log directory"
 chown -R ${USER}:${USER} "$LOG_DIR" || errexit "Could not change owenership of log directory"
+
+#  install open-stage-control
+wget "$OSC_DEB" -O /tmp/openstagecontrol.deb || errexit "Couldn't download open-stage-control as deb package"
+gdebi --n /tmp/openstagecontrol.deb  || errexit "Couldn't install open-stage-control from deb"
+rm /tmp/openstagecontrol.deb || errexit "Couldn't remove /tmp/openstagecontrol.deb"
+
 
 SYSTEMD_UNIT_CONTENT="
 [Unit]
