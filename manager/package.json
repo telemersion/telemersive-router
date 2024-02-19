@@ -4,7 +4,7 @@
   "main": "debug.js",
   "dependencies": {
     "mqtt": "^4.2.6",
-    "telemersive-bus": "0.6.2"
+    "telemersive-bus": "0.6.3"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
