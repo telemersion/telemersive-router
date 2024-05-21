@@ -1,0 +1,28 @@
+#N canvas 397 215 719 488 10;
+#X declare -path ./include;
+#X obj 21 10 bng 20 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 21 35 \$0;
+#X msg 21 60 \; server telematic.zhdk.ch 11210 \;;
+#X obj 25 135 t_client one 1;
+#X obj 51 10 r reinit;
+#X obj 287 56 t_client many 1;
+#X obj 291 193 t_client many 2;
+#X msg 25 106 97 10;
+#X msg 287 26 98 10;
+#X msg 291 160 99 10;
+#X obj 291 304 t_client many 3;
+#X msg 291 272 100 10;
+#X obj 482 95 gtraffic;
+#X obj 477 223 gtraffic;
+#X obj 106 10 declare -path ./include;
+#X text 42 416 All rates are measured in MBytes/s;
+#X connect 0 0 1 0;
+#X connect 1 0 2 0;
+#X connect 4 0 1 0;
+#X connect 7 0 3 0;
+#X connect 8 0 5 0;
+#X connect 9 0 6 0;
+#X connect 11 0 10 0;
+#X connect 12 0 6 0;
+#X connect 13 0 10 0;

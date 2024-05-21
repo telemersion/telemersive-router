@@ -1,0 +1,48 @@
+#N canvas 788 371 463 410 10;
+#X obj 245 21 array define \$0.data 65536;
+#X obj 275 110 loadbang;
+#X msg 275 133 0 47;
+#X obj 275 156 s \$0.data;
+#X obj 20 305 array get \$0.data;
+#X obj 20 277 t b a;
+#X obj 20 40 tgl 20 0 empty empty empty 17 7 0 10 -261234 -1 -1 0 1
+;
+#X obj 40 40 nbx 5 20 64 32768 0 0 empty empty empty 0 -8 0 10 -262144
+-1 -1 1024 256;
+#X obj 97 40 nbx 5 20 0 100 0 0 empty empty empty 0 -8 0 10 -262144
+-1 -1 0.1 256;
+#X obj 97 74 * 1024;
+#X obj 97 99 * 1024;
+#X obj 44 143 /;
+#X msg 44 167 1000 \$1;
+#X obj 44 190 /;
+#X obj 20 228 metro 1;
+#X obj 44 116 t b a a;
+#X obj 20 251 f, f 16;
+#X obj 203 225 loadbang;
+#X msg 203 248 0.1;
+#X msg 185 184 1024;
+#X obj 19 343 outlet;
+#X connect 1 0 2 0;
+#X connect 2 0 3 0;
+#X connect 4 0 20 0;
+#X connect 5 0 4 0;
+#X connect 5 1 4 1;
+#X connect 6 0 14 0;
+#X connect 7 0 15 0;
+#X connect 8 0 9 0;
+#X connect 9 0 10 0;
+#X connect 10 0 11 0;
+#X connect 11 0 12 0;
+#X connect 12 0 13 0;
+#X connect 13 0 14 1;
+#X connect 14 0 16 0;
+#X connect 15 0 11 0;
+#X connect 15 1 11 1;
+#X connect 15 2 16 1;
+#X connect 16 0 5 0;
+#X connect 17 0 18 0;
+#X connect 17 0 19 0;
+#X connect 18 0 8 0;
+#X connect 19 0 7 0;
+#X coords 0 -1 1 1 134 40 1 20 20;
