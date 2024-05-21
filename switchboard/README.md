@@ -1,10 +1,96 @@
 # Telemersive Switchboard
 
+*Telemersive Switchboard* is developed in the research project **Spatial Dis-/Continuities in Telematic Performances**. It is one element of our tool set to enable remote locations to create overlapping spaces on physical and virtualstages.
+
 *Telemersive Switchboard* is a service with a JSON API to manage different types of UDP proxies. UDP proxies are way to establish UDP connections between clients from behind NAT firewalls. The UDP proxies support several
 connection topologies.
 
 It is written in [Python](https://www.python.org/) and uses the
 [flask](https://flask.palletsprojects.com/) framework.
+
+
+## Requirement
+
+### Open Stage Control
+
+OpenStageControl installation is not covered by the install script below. However, installation is trivial:
+
+1. `sudo apt install gdebi-core wget`
+2. `wget "https://github.com/jean-emmanuel/open-stage-control/releases/download/v1.25.5/open-stage-control_1.25.5_amd64.deb"`
+3. `sudo gdebi open-stage-control_1.25.5_amd64.deb`
+
+### Setup for use in telemersive-switchboard
+
+When an instance of the `OpenStageControl` module is started, it automatically creates a folder named after the room and copies
+a default session to that new folder. Thus, we need to make sure the folder exists and the user OpenStageControl runs under has
+access to it:
+
+1. `sudo mkdir -p /opt/open-stage-control/sessions/tsb_sessions`
+2. `sudo chown -R telemersive-switchboard:telemersive-switchboard /opt/open-stage-control/sessions`
+
+We also need to create a template session that is automatically loaded in a new room and save it under this path:  
+`/opt/open-stage-control/sessions/tsb_sessions/template.json`
+
+### Interaction with OSC clients
+
+By the use of a `many2manyBi` proxy, we can send OSC events generated in OpenStageControl to many OSC clients. In return,
+many OSC clients can send OSC messages to OpenStageControl. telemersive-switchboard does not autamically start a `many2manyBi`
+proxy when launching an instance of `OpenStageControl`. For this to work, `port` of `many2manyBi` must be set to `many_port`
+of `OpenStageControl`. The telemersive-gateway automatically sets up a proxy for OSC message relaying when starting an
+instance of `OpenStageControl`.
+
+
+## Installation
+
+To install the switchboard as a service (Debian with systemd) use the following command:
+
+```bash
+./switchboard/switchboard-service-install.sh
+```
+
+The recommended way of running *Telemersive Switchboard* is to execute it under [gunicorn](https://gunicorn.org/). The included script `setup.sh` automates the process of setting up Telemersive Switchboard* as a system service. The script is tested on *Debian* and *Ubuntu*. Run it as root:
+
+## Configuration
+
+### Restrict Accessibility
+
+```bash
+# TBD
+```
+
+
+## Usage
+
+### Service
+
+```bash
+# start service
+sudo systemctl start telemersive-switchboard.service
+
+# stop service
+sudo systemctl stop telemersive-switchboard.service
+
+# restart service
+sudo systemctl restart telemersive-switchboard.service
+
+# enable service (auto-start on restart)
+sudo systemctl enable telemersive-switchboard.service
+
+# disbale service
+sudo systemctl disable telemersive-switchboard.service
+
+# show status
+sudo systemctl status telemersive-switchboard.service
+```
+
+### Logging
+The service logs accesses to `/var/log/telemersive-swtichboard/access.log` and other messages to `/var/log/telemersive-switchboard/error.log`.
+
+## Uninstall
+
+```bash
+sudo ./switchboard/switchboard-service-uninstall.sh.sh
+```
 
 ## JSON API description
 
@@ -133,69 +219,15 @@ are considered active as long as they send at least one packet per second.
 **one2manyMo**, **one2manyBi** and **many2manyBi**
 On ports that require packets to indicate an active connection, these scripts also accept an OSC packet without a payload and the address `/hb` without forwarding this packet.
 
-## Open Stage Control
-### Installation
-OpenStageControl installation is not covered by the setup script below. However, installation is trivial:
-
-1. `sudo apt install gdebi-core wget`
-2. `wget "https://github.com/jean-emmanuel/open-stage-control/releases/download/v1.25.5/open-stage-control_1.25.5_amd64.deb"`
-3. `sudo gdebi open-stage-control_1.25.5_amd64.deb`
-
-### Setup for use in telemersive-switchboard
-When an instance of the `OpenStageControl` module is started, it automatically creates a folder named after the room and copies
-a default session to that new folder. Thus, we need to make sure the folder exists and the user OpenStageControl runs under has
-access to it:
-
-1. `sudo mkdir -p /opt/open-stage-control/sessions/tsb_sessions`
-2. `sudo chown -R telemersive-switchboard:telemersive-switchboard /opt/open-stage-control/sessions`
-
-We also need to create a template session that is automatically loaded in a new room and save it under this path:  
-`/opt/open-stage-control/sessions/tsb_sessions/template.json`
-
-### Interaction with OSC clients
-By the use of a `many2manyBi` proxy, we can send OSC events generated in OpenStageControl to many OSC clients. In return,
-many OSC clients can send OSC messages to OpenStageControl. telemersive-switchboard does not autamically start a `many2manyBi`
-proxy when launching an instance of `OpenStageControl`. For this to work, `port` of `many2manyBi` must be set to `many_port`
-of `OpenStageControl`. The telemersive-gateway automatically sets up a proxy for OSC message relaying when starting an
-instance of `OpenStageControl`.
-
-
-## Deployment
-
-The recommended way of running *Telemersive Switchboard* is to execute it under [gunicorn](https://gunicorn.org/). The included script `setup.sh` automates the process of setting up Telemersive Switchboard* as a system service. The script is tested on *Debian* and *Ubuntu*. Run it as root:
-
-```bash
-./setup.sh
-```
-
-### Stopping
-
-This works best if no proxies are open.
-
-```bash
-systemctl stop telemersive-switchboard.service
-```
-
-### Logging
-The service logs accesses to `/var/log/telemersive-swtichboard/access.log` and other messages to `/var/log/telemersive-switchboard/error.log`.
-
-
-## About
-
-*Telemersive Switchboard* is developed in the research project **Spatial Dis-/Continuities in Telematic Performances**. It is one element of our tool set to enable remote locations to create overlapping spaces on physical and virtualstages.
-
-## Authors
+## Credits
 
 Main contribution:
-* Roman Haefeli <roman.haefeli@zhdk.ch>
+* Roman Haefeli 
 
 Programming:
-* Martin Froehlich <martin.froehlich@zhdk.ch>
-* Florian Bruggisser <florian.bruggisser@zhdk.ch>
+* Martin Froehlich 
+* Florian Bruggisser 
 
 Bug Fixing:
-* Joel Gähwiler <joel.gaehwiler@gmail.com>
+* Joel Gähwiler 
 
-## License
-
-**GPL 3.0** (see [LICENSE.txt](LICENSE.txt))

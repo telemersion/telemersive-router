@@ -1,10 +1,12 @@
 #!/bin/bash
 
-USER="telemersive-switchboard"
+# load configuration
+source switchboard-service.cfg
+
+USER=$SERVICE_USER_NAME
 HOME="/opt/open-stage-control/sessions/tsb_sessions"
 APP_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 APP_NAME="switchboard"
-SERVICE_NAME="telemersive-switchboard"
 LOG_DIR="/var/log/telemersive-switchboard"
 LISTEN_PORT=3591
 LISTEN_ADDRESS="0.0.0.0"

@@ -11,7 +11,7 @@ SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 echo "Working Directory: $SCRIPT_PATH"
 
 # switch to working directory
-pushd "$SCRIPT_PATH/broker/"
+pushd "$SCRIPT_PATH/"
 
 # run mosquitto
 mosquitto -c "mosquitto.conf"

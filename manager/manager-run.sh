@@ -11,7 +11,7 @@ SCRIPT_PATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 echo "Working Directory: $SCRIPT_PATH"
 
 # switch to working directory
-pushd "$SCRIPT_PATH/manager/"
+pushd "$SCRIPT_PATH/"
 
 # setup npm
 npm install
