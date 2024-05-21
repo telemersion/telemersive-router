@@ -37,7 +37,7 @@ sudo systemctl status telemersive-nat-helper.service
 ## Uninstall
 
 ```bash
-sudo ./nat-helper/nat-helper-service-uninstall.sh.sh
+sudo ./nat-helper/nat-helper-service-uninstall.sh
 ```
 
 ## Credits
