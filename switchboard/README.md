@@ -43,7 +43,8 @@ We also need to create a template session that is automatically loaded in a new 
 To install the switchboard as a service (Debian with systemd) use the following command:
 
 ```bash
-./switchboard/switchboard-service-install.sh
+cd switchboard
+./switchboard-service-install.sh
 ```
 
 The recommended way of running *Telemersive Switchboard* is to execute it under [gunicorn](https://gunicorn.org/). The included script `setup.sh` automates the process of setting up Telemersive Switchboard* as a system service. The script is tested on *Debian* and *Ubuntu*. Run it as root:
