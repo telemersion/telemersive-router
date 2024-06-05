@@ -21,7 +21,7 @@ setfacl -R -m u:$SERVICE_USER_NAME:rwx "$SCRIPT_PATH"
 # prepare service configuration form template
 echo "installing service..."
 RUN_SCRIPT_PATH="$SCRIPT_PATH/nat-helper"
-cp "nat-helper/$SERVICE_NAME.service.txt" "$SERVICE_NAME.service"
+cp "./$SERVICE_NAME.service.txt" "$SERVICE_NAME.service"
 
 sed -i -e "s~%COMMAND%~$RUN_SCRIPT_PATH~g" "$SERVICE_NAME.service"
 sed -i -e "s~%USER%~$SERVICE_USER_NAME~g" "$SERVICE_NAME.service"

@@ -4,10 +4,11 @@
 
 ## Installation
 
-To install the mosquitto broker as a service (Debian with systemd) use the following command:
+To install the mosquitto broker as a service (Debian with systemd) use the following commands as root:
 
 ```bash
-sudo ./broker/broker-service-install.sh
+cd /broker
+./broker-service-install.sh
 ```
 
 ## Configuration

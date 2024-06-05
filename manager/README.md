@@ -2,13 +2,6 @@
 
 *manager* contains the telemersive-manager
 
-## Requirement
-
-* nodejs needs to be available
-
-```
-apt install nodejs
-```
 
 ## Installation
 
@@ -17,7 +10,8 @@ Important for the installation is that first the broker is installed and second 
 Installs the manager together with NPM if it is not installed already.
 
 ```bash
-sudo ./manager/manager-service-install.sh
+cd manager
+./manager-service-install.sh
 ```
 
 ## Configuration

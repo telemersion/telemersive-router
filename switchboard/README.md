@@ -9,44 +9,22 @@ It is written in [Python](https://www.python.org/) and uses the
 [flask](https://flask.palletsprojects.com/) framework.
 
 
-## Requirement
+## Requirements
 
-### Installing OpenStageControl
+The following requirements are automatically installed when using the installation script
+described in the next section:
 
-[OpenStageControl](https://openstagecontrol.ammd.net/) is a web application that allows the easy creation of user interfaces and is seamlessly integrated in the telemersive toolkit:
-
-```bash
-sudo apt install gdebi-core wget
-wget "https://github.com/jean-emmanuel/open-stage-control/releases/download/v1.26.2/open-stage-control_1.26.2_amd64.deb"
-sudo gdebi open-stage-control_1.26.2_amd64.deb
-```
-
-### Setup OpenStageControl for instantiating by switchboard
-
-When an instance of the `OpenStageControl` module is started, it automatically creates a folder named after the room and copies
-a default session to that new folder. Thus, we need to make sure the folder exists and the user OpenStageControl runs under has
-access to it:
-
-```bash
-sudo mkdir -p /opt/open-stage-control/sessions/tsb_sessions
-sudo chown -R telemersive-switchboard:telemersive-switchboard /opt/open-stage-control/sessions
-```
-
-We also need to create a template session that is automatically loaded in a new room and save it under this path:  
-
-```bash
-/opt/open-stage-control/sessions/tsb_sessions/template.json
-```
+  * [OpenStageControl](https://openstagecontrol.ammd.net/) is a web application that allows the easy creation of user interfaces and is seamlessly integrated in the telemersive toolkit. It is automatically installed when following the steps below.
+ *  [gunicorn](https://gunicorn.org/):Python WSGI HTTP Server for UNIX
 
 ## Installation
 
-To install the switchboard as a service (Debian with systemd) use the following command:
+To install the switchboard as a service (Debian with systemd) use the following command as root:
 
 ```bash
-./switchboard/switchboard-service-install.sh
+cd switchboard
+./switchboard-service-install.sh
 ```
-
-The recommended way of running *Telemersive Switchboard* is to execute it under [gunicorn](https://gunicorn.org/). The included script `setup.sh` automates the process of setting up Telemersive Switchboard* as a system service. The script is tested on *Debian* and *Ubuntu*. Run it as root:
 
 ## Configuration
 

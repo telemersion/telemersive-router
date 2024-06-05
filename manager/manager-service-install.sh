@@ -18,8 +18,8 @@ sudo apt install acl -y
 
 # installing node
 curl -fsSL https://deb.nodesource.com/setup_15.x | bash -
-sudo apt-get install -y nodejs
-sudo apt-get install gcc g++ make
+apt-get update
+apt-get install -y acl nodejs npm gcc g++ make
 
 # add user
 echo "adding service user..."
