@@ -73,9 +73,10 @@ Description=telemersive-switchboard - manager for udp proxies
 After=syslog.target
 
 [Service]
+EnvironmentFile=$(readlink -f switchboard-service.cfg)
 Type=simple
 ExecStart=/usr/bin/gunicorn3 \\
-            --bind $LISTEN_ADDRESS:$LISTEN_PORT \\
+            --bind \${SERVICE_LISTEN_ADDRESS}:\${SERVICE_LISTEN_PORT} \\
             --chdir $APP_PATH \\
 	    --graceful-timeout 1 \\
             --access-logfile /var/log/telemersive-switchboard/access.log \\
