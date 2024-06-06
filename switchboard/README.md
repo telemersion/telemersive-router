@@ -34,16 +34,16 @@ Per default, the telemersive-switchboard listens for incoming requests from anyw
 access. Thus, anyone with network access might start and stop proxy instances freely. On an environment
 with public IP address, it might be desired to allow only the telemersive-manager to access the
 telemersive-switchboard. This can be achieved by configuring the telemersive-switchboard to listen on the
-localhost address only by editing the script `switchboard.py`. Find the line:
+localhost address only by editing the file `switchboard-service.cfg`. Find the line:
 
 ```
-listen_address = '0.0.0.0'
+SERVICE_LISTEN_ADDRESS=0.0.0.0
 ```
 
 and change it to:
 
 ```
-listen_address = '127.0.0.1'
+SERVICE_LISTEN_ADDRESS=127.0.0.1
 ```
 
 After this change, the telemersive-switchboard needs to be restarted for the change to take effect:
