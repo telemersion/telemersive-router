@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-tpf-switchboard creates and destroys udp proxies dynamically on request.
+telemersive-switchboard creates and destroys udp proxies dynamically on request.
 """
 
 import copy
