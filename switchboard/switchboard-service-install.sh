@@ -11,7 +11,7 @@ LOG_DIR="/var/log/telemersive-switchboard"
 LISTEN_PORT=3591
 LISTEN_ADDRESS="0.0.0.0"
 DEB_PKGS="python3-flask gunicorn3 gdebi-core wget"
-OSC_DEB="https://github.com/jean-emmanuel/open-stage-control/releases/download/v1.26.2/open-stage-control_1.26.2_amd64.deb"
+OSC_DEB="https://openstagecontrol.ammd.net/packages/open-stage-control_1.30.3_amd64.deb"
 
 function hilite {
   echo -ne "\033[32m"
