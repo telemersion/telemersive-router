@@ -45,14 +45,19 @@ class One2ManyMoProxy(multiprocessing.Process):
         # key of dict is sink_client's (address, port) tuple
         self.sink_clients = {}
         self.source_client = None
+        self.source_last_seen = None
         self.timeout = timeout
         self.listen_port = listen_port
         self.state = state
 
     def sync_state(self, now):
         clients = {}
-        if self.source_client:
-            clients[addr_key(self.source_client)] = {'role': 'source', 'last_seen': now}
+        if self.source_client is not None:
+            if (self.source_last_seen + self.timeout) < now:
+                self.source_client = None
+                self.source_last_seen = None
+            else:
+                clients[addr_key(self.source_client)] = {'role': 'source', 'last_seen': self.source_last_seen}
         for addr, ts in self.sink_clients.items():
             clients[addr_key(addr)] = {'role': 'sink', 'last_seen': ts}
         self.state.set_clients(clients)
@@ -81,6 +86,7 @@ class One2ManyMoProxy(multiprocessing.Process):
                     continue
 
                 self.source_client = addr
+                self.source_last_seen = time.time()
                 if self.state:
                     self.state.add(packets_in=1, bytes_in=len(data))
 
