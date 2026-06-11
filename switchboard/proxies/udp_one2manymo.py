@@ -11,6 +11,8 @@ import socket
 import sys
 import time
 
+from proxies.state import addr_key, SYNC_INTERVAL
+
 class One2ManyMoProxy(multiprocessing.Process):
     """
     Relays UDP packets from one source client to many sink clients. Sink clients
@@ -18,7 +20,7 @@ class One2ManyMoProxy(multiprocessing.Process):
     Different ports are used for source and sink clients.
     """
 
-    def __init__(self, listen_port=None, many_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
+    def __init__(self, listen_port=None, many_port=None, listen_address='0.0.0.0', timeout=10, logger=None, state=None):
         super(One2ManyMoProxy, self).__init__()
         for port in [listen_port, many_port]:
             if not isinstance(port, int) or not  1024 <= port <= 65535:
@@ -42,10 +44,21 @@ class One2ManyMoProxy(multiprocessing.Process):
         self.logger = logger
         # key of dict is sink_client's (address, port) tuple
         self.sink_clients = {}
+        self.source_client = None
         self.timeout = timeout
         self.listen_port = listen_port
+        self.state = state
+
+    def sync_state(self, now):
+        clients = {}
+        if self.source_client:
+            clients[addr_key(self.source_client)] = {'role': 'source', 'last_seen': now}
+        for addr, ts in self.sink_clients.items():
+            clients[addr_key(addr)] = {'role': 'sink', 'last_seen': ts}
+        self.state.set_clients(clients)
 
     def run(self):
+        last_sync = 0
         try:
             while not self.kill_signal.value:
                 # handle incoming packets from sink clients
@@ -60,7 +73,16 @@ class One2ManyMoProxy(multiprocessing.Process):
                 try:
                     data, addr = self.source.recvfrom(65536)
                 except socket.timeout:
+                    if self.state:
+                        now = time.time()
+                        if now - last_sync >= SYNC_INTERVAL:
+                            self.sync_state(now)
+                            last_sync = now
                     continue
+
+                self.source_client = addr
+                if self.state:
+                    self.state.add(packets_in=1, bytes_in=len(data))
 
                 # remove expired clients from sink_clients
                 for client, prev_ts in list(self.sink_clients.items()):
@@ -71,8 +93,16 @@ class One2ManyMoProxy(multiprocessing.Process):
                 for client in self.sink_clients.keys():
                     try:
                         self.sink.sendto(data, client)
+                        if self.state:
+                            self.state.add(packets_out=1, bytes_out=len(data))
                     except BlockingIOError:
                         continue
+
+                if self.state:
+                    now = time.time()
+                    if now - last_sync >= SYNC_INTERVAL:
+                        self.sync_state(now)
+                        last_sync = now
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.listen_port}')
         except:

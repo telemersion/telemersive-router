@@ -28,7 +28,7 @@ class OpenStageControl:
     one instance of this.
     """
 
-    def __init__(self, http_port=None, osc_port=None, session=None, logger=None):
+    def __init__(self, http_port=None, osc_port=None, session=None, logger=None, state=None):
         if not isinstance(http_port, int) or not  1024 <= http_port <= 65535:
             raise ValueError('Specified http_port "%s" is invalid.' % http_port)
         if not isinstance(osc_port, int) or not  1024 <= osc_port <= 65535:
@@ -95,6 +95,13 @@ class OpenStageControl:
 
     def terminate(self):
         return
+
+    def is_alive(self):
+        return isinstance(self.p, subprocess.Popen) and self.p.poll() is None
+
+    @property
+    def pid(self):
+        return self.p.pid if isinstance(self.p, subprocess.Popen) else None
 
 def main():
     logger = logging.getLogger()

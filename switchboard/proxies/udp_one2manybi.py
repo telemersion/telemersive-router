@@ -12,6 +12,8 @@ import socket
 import sys
 import time
 
+from proxies.state import addr_key, SYNC_INTERVAL
+
 class One2ManyBiProxy(multiprocessing.Process):
     """
     Relays UDP packets from one source client to many sink clients. Sink clients
@@ -19,7 +21,7 @@ class One2ManyBiProxy(multiprocessing.Process):
     Different ports are used for source and sink clients.
     """
 
-    def __init__(self, listen_port=None, many_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
+    def __init__(self, listen_port=None, many_port=None, listen_address='0.0.0.0', timeout=10, logger=None, state=None):
         super(One2ManyBiProxy, self).__init__()
         for port in [listen_port, many_port]:
             if not isinstance(port, int) or not  1024 <= port <= 65535:
@@ -44,8 +46,10 @@ class One2ManyBiProxy(multiprocessing.Process):
         self.heartbeat_sequence = bytes([47, 104, 98, 0, 44, 0, 0, 0])
         self.listen_port = listen_port
         self.many_port = many_port
+        self.state = state
 
     def run(self):
+        last_sync = 0
         try:
             listening_sockets = [self.source, self.sink]
             while not self.kill_signal.value:
@@ -55,6 +59,8 @@ class One2ManyBiProxy(multiprocessing.Process):
                         # many sends back to one
                         many_data, many_addr = sock.recvfrom(65536)
                         self.active_endpoints[many_addr] = time.time()
+                        if self.state:
+                            self.state.add(packets_in=1, bytes_in=len(many_data))
                         if self.heartbeat_sequence != many_data[:len(self.heartbeat_sequence)]:
                             try:
                                 self.active_endpoints[one_addr]
@@ -68,12 +74,16 @@ class One2ManyBiProxy(multiprocessing.Process):
                             else:
                                 try:
                                     self.source.sendto(many_data, one_addr)
+                                    if self.state:
+                                        self.state.add(packets_out=1, bytes_out=len(many_data))
                                 except BlockingIOError:
                                     continue
                     elif sock.getsockname()[1] == self.listen_port:
                         # one sends to many
                         one_data, one_addr = sock.recvfrom(65536)
                         self.active_endpoints[one_addr] = time.time()
+                        if self.state:
+                            self.state.add(packets_in=1, bytes_in=len(one_data))
                         if self.heartbeat_sequence != one_data[:len(self.heartbeat_sequence)]:
                             many_list = list(self.active_endpoints.keys())
                             many_list.remove(one_addr)
@@ -83,10 +93,19 @@ class One2ManyBiProxy(multiprocessing.Process):
                                 else:
                                     try:
                                         self.sink.sendto(one_data, many_addr)
+                                        if self.state:
+                                            self.state.add(packets_out=1, bytes_out=len(one_data))
                                     except BlockingIOError:
                                         continue
                     else:
                         print('We should not ever reach that point')
+                if self.state:
+                    now = time.time()
+                    if now - last_sync >= SYNC_INTERVAL:
+                        clients = {addr_key(addr): {'role': 'peer', 'last_seen': ts}
+                                for addr, ts in self.active_endpoints.items()}
+                        self.state.set_clients(clients)
+                        last_sync = now
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.listen_port}')
         except:

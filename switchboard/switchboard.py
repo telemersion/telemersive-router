@@ -7,6 +7,7 @@ telemersive-switchboard creates and destroys udp proxies dynamically on request.
 
 import copy
 import logging
+import multiprocessing
 import sys
 import time
 import proxies
@@ -16,12 +17,16 @@ from flask import Flask, json, Response, request
 # myproxies = {
 #      4484: {
 #          'obj': <proxy_obj>,
+#          'state': <ProxyState_obj or None>,
 #          'type': 'simple',
 #          'description': 'Some description about the proxy',
 #          'room': 'Name of the room'
 #      }
 # }
 myproxies = {}
+
+# shared between this process and the proxy processes to expose runtime state
+state_manager = multiprocessing.Manager()
 
 port_range = range(10000, 32768)
 baseroute = '/proxies/'
@@ -44,9 +49,19 @@ class r(Response):
 def representation_format(proxy):
     r_proxy = {}
     for key in proxy.keys():
-        if key != 'obj':
+        if key not in ('obj', 'state'):
             r_proxy[key] = proxy[key]
     return r_proxy
+
+def state_format(proxy):
+    obj = proxy['obj']
+    proxy_state = {
+        'running': obj.is_alive(),
+        'pid': obj.pid,
+    }
+    if proxy['state'] is not None:
+        proxy_state.update(proxy['state'].to_dict())
+    return proxy_state
 
 def get_proxies_of_room(room):
     proxies_in_room = {}
@@ -55,6 +70,13 @@ def get_proxies_of_room(room):
             proxy = representation_format(myproxies[key])
             proxies_in_room[key] = proxy
     return proxies_in_room
+
+def get_state_of_room(room):
+    state_of_room = {}
+    for key in myproxies.keys():
+        if room == myproxies[key]['room']:
+            state_of_room[key] = state_format(myproxies[key])
+    return state_of_room
 
 @app.route(baseroute, methods=['POST'])
 def start_proxy():
@@ -115,19 +137,25 @@ def start_proxy():
     try:
         myproxies[proxydef['port']]
     except KeyError:
+        state = None
         try:
             if proxydef['type'] == 'mirror':
-                obj = proxies.MirrorProxy(listen_port=proxydef['port'], logger=app.logger)
+                state = proxies.ProxyState(state_manager)
+                obj = proxies.MirrorProxy(listen_port=proxydef['port'], logger=app.logger, state=state)
             elif proxydef['type'] == 'one2oneBi':
-                obj = proxies.One2OneBiProxy(listen_port=proxydef['port'], logger=app.logger)
+                state = proxies.ProxyState(state_manager)
+                obj = proxies.One2OneBiProxy(listen_port=proxydef['port'], logger=app.logger, state=state)
             elif proxydef['type'] == 'one2manyMo':
+                state = proxies.ProxyState(state_manager)
                 obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], many_port=many_port,
-                        logger=app.logger)
+                        logger=app.logger, state=state)
             elif proxydef['type'] == 'one2manyBi':
+                state = proxies.ProxyState(state_manager)
                 obj = proxies.One2ManyBiProxy(listen_port=proxydef['port'], many_port=many_port,
-                        logger=app.logger)
+                        logger=app.logger, state=state)
             elif proxydef['type'] == 'many2manyBi':
-                obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger)
+                state = proxies.ProxyState(state_manager)
+                obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger, state=state)
             elif proxydef['type'] == 'OpenStageControl':
                 obj = proxies.OpenStageControl(http_port=proxydef['port'], osc_port=many_port,
                         session=proxydef['room'], logger=app.logger)
@@ -141,6 +169,7 @@ def start_proxy():
             obj.start()
             myproxies[proxydef['port']] = {
                 'obj': obj,
+                'state': state,
                 'source-port': proxydef['port'],
                 'sink-port': many_port,
                 'type': proxydef['type'],
@@ -182,6 +211,13 @@ def get_proxy(port):
     except KeyError:
         return r(json.dumps({'status': 'Error', 'msg': 'No proxy running on this port'}), 404)
 
+@app.route(baseroute + '<int:port>/state', methods=['GET'])
+def get_proxy_state(port):
+    try:
+        return r(json.dumps(state_format(myproxies[port])))
+    except KeyError:
+        return r(json.dumps({'status': 'Error', 'msg': 'No proxy running on this port'}), 404)
+
 @app.route('/rooms/', methods=['GET'])
 def get_proxies_grouped_by_room():
     rooms = {myproxies[key]['room'] for key in myproxies.keys()}
@@ -200,6 +236,15 @@ def get_proxies_of_room_http(room):
         return r(json.dumps(response), 404)
     proxies_of_room = get_proxies_of_room(room)
     return r(json.dumps(proxies_of_room))
+
+@app.route('/rooms/' + '<string:room>/state', methods=['GET'])
+def get_state_of_room_http(room):
+    try:
+        assert room in {myproxies[key]['room'] for key in myproxies.keys()}
+    except AssertionError:
+        response = {'status': 'Error', 'msg': 'No such room found: %s' % room}
+        return r(json.dumps(response), 404)
+    return r(json.dumps(get_state_of_room(room)))
 
 def main():
     try:

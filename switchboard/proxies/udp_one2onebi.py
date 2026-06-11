@@ -9,6 +9,9 @@ import logging
 import multiprocessing
 import socket
 import sys
+import time
+
+from proxies.state import addr_key, SYNC_INTERVAL
 
 
 class One2OneBiProxy(multiprocessing.Process):
@@ -18,7 +21,7 @@ class One2OneBiProxy(multiprocessing.Process):
     through a server with a public IP running this script.
     """
 
-    def __init__(self, listen_port=None, listen_address='0.0.0.0', logger=None):
+    def __init__(self, listen_port=None, listen_address='0.0.0.0', logger=None, state=None):
         super(One2OneBiProxy, self).__init__()
         if not isinstance(listen_port, int) or not  1024 <= listen_port <= 65535:
             raise ValueError('Specified port "%s" is invalid.' % listen_port)
@@ -32,8 +35,10 @@ class One2OneBiProxy(multiprocessing.Process):
         self.port = listen_port
         self.kill_signal = multiprocessing.Value('i', False)
         self.logger = logger
+        self.state = state
 
     def run(self):
+        last_sync = 0
         try:
             client1 = None
             client2 = None
@@ -48,6 +53,9 @@ class One2OneBiProxy(multiprocessing.Process):
                     client1 = client2
                     client2 = addr
 
+                if self.state:
+                    self.state.add(packets_in=1, bytes_in=len(data))
+
                 # transmit data
                 if client1 and client2:
                     try:
@@ -55,8 +63,20 @@ class One2OneBiProxy(multiprocessing.Process):
                             self.sock.sendto(data, client2)
                         elif addr == client2:
                             self.sock.sendto(data, client1)
+                        if self.state:
+                            self.state.add(packets_out=1, bytes_out=len(data))
                     except BlockingIOError:
                         continue
+
+                if self.state:
+                    now = time.time()
+                    if now - last_sync >= SYNC_INTERVAL:
+                        clients = {}
+                        for client in (client1, client2):
+                            if client:
+                                clients[addr_key(client)] = {'role': 'peer', 'last_seen': now}
+                        self.state.set_clients(clients)
+                        last_sync = now
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.port}')
         except:

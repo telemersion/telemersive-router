@@ -11,6 +11,8 @@ import socket
 import sys
 import time
 
+from proxies.state import addr_key, SYNC_INTERVAL
+
 class Many2ManyBiProxy(multiprocessing.Process):
     """
     Relays UDP packets between many endpoints. Incoming packets are forwarded
@@ -18,7 +20,7 @@ class Many2ManyBiProxy(multiprocessing.Process):
     forwarded, but keeps connection alive.
     """
 
-    def __init__(self, listen_port=None, listen_address='0.0.0.0', timeout=10, logger=None):
+    def __init__(self, listen_port=None, listen_address='0.0.0.0', timeout=10, logger=None, state=None):
         super(Many2ManyBiProxy, self).__init__()
         if not isinstance(listen_port, int) or not  1024 <= listen_port <= 65535:
             raise ValueError('Specified port "%s" is invalid.' % listen_port)
@@ -36,15 +38,26 @@ class Many2ManyBiProxy(multiprocessing.Process):
         self.timeout = timeout
         self.logger = logger
         self.heartbeat_sequence = bytes([47, 104, 98, 0, 44, 0, 0, 0])
+        self.state = state
 
     def run(self):
+        last_sync = 0
         try:
             while not self.kill_signal.value:
                 try:
                     my_data, my_addr = self.sock.recvfrom(65536)
                 except socket.timeout:
+                    if self.state:
+                        now = time.time()
+                        if now - last_sync >= SYNC_INTERVAL:
+                            clients = {addr_key(addr): {'role': 'peer', 'last_seen': ts}
+                                    for addr, ts in self.active_endpoints.items()}
+                            self.state.set_clients(clients)
+                            last_sync = now
                     continue
                 self.active_endpoints[my_addr] = time.time()
+                if self.state:
+                    self.state.add(packets_in=1, bytes_in=len(my_data))
                 if self.heartbeat_sequence != my_data[:len(self.heartbeat_sequence)]:
                     other_clients = list(self.active_endpoints.keys())
                     other_clients.remove(my_addr)
@@ -56,8 +69,17 @@ class Many2ManyBiProxy(multiprocessing.Process):
                         else:
                             try:
                                 self.sock.sendto(my_data, addr)
+                                if self.state:
+                                    self.state.add(packets_out=1, bytes_out=len(my_data))
                             except BlockingIOError:
                                 continue
+                if self.state:
+                    now = time.time()
+                    if now - last_sync >= SYNC_INTERVAL:
+                        clients = {addr_key(addr): {'role': 'peer', 'last_seen': ts}
+                                for addr, ts in self.active_endpoints.items()}
+                        self.state.set_clients(clients)
+                        last_sync = now
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.port}')
         except:

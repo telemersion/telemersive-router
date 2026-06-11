@@ -157,6 +157,78 @@ curl \
   http://localhost:3591/rooms/rehearsal
 ```
 
+### Inspect proxy runtime state
+
+In addition to the static proxy configuration, runtime state (whether the
+proxy process is running, its PID, traffic counters and currently connected
+clients) can be requested for a single proxy or for all proxies of a room
+through the `/state` sub-path.
+
+cURL examples:
+
+```bash
+curl \
+  --request GET \
+  http://localhost:3591/proxies/11000/state
+```
+
+```bash
+curl \
+  --request GET \
+  http://localhost:3591/rooms/rehearsal/state
+```
+
+The response for a single proxy looks like this:
+
+```json
+{
+  "running": true,
+  "pid": 12345,
+  "packets_in": 1024,
+  "bytes_in": 1458176,
+  "packets_out": 1024,
+  "bytes_out": 1458176,
+  "clients": {
+    "203.0.113.10:11000": {"role": "peer", "last_seen": 1718000000.123}
+  }
+}
+```
+
+`<base>/rooms/<room>/state` returns an object mapping each proxy's port in
+that room to a state object of the same shape. Traffic counters and the
+client list are only populated for UDP relay proxy types (not
+`OpenStageControl`); the client list is updated at most once per second.
+
+For example, a response for `/rooms/rehearsal/state` might look like this:
+
+```json
+{
+  "11000": {
+    "running": true,
+    "pid": 12345,
+    "packets_in": 1024,
+    "bytes_in": 1458176,
+    "packets_out": 1024,
+    "bytes_out": 1458176,
+    "clients": {
+      "203.0.113.10:11000": {"role": "peer", "last_seen": 1718000000.123}
+    }
+  },
+  "11002": {
+    "running": true,
+    "pid": 12346,
+    "packets_in": 512,
+    "bytes_in": 65536,
+    "packets_out": 1024,
+    "bytes_out": 131072,
+    "clients": {
+      "203.0.113.10:11002": {"role": "source", "last_seen": 1718000000.456},
+      "203.0.113.20:11003": {"role": "sink", "last_seen": 1718000000.456}
+    }
+  }
+}
+```
+
 ### Stop a running proxy
 
 A running proxy is stopped with a HTTP `DELETE` request to the proxy's path.

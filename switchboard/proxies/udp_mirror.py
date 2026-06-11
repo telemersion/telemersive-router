@@ -9,6 +9,9 @@ import logging
 import multiprocessing
 import socket
 import sys
+import time
+
+from proxies.state import addr_key, SYNC_INTERVAL
 
 
 class MirrorProxy(multiprocessing.Process):
@@ -17,7 +20,7 @@ class MirrorProxy(multiprocessing.Process):
     purposes.
     """
 
-    def __init__(self, listen_port=None, listen_address='0.0.0.0', logger=None):
+    def __init__(self, listen_port=None, listen_address='0.0.0.0', logger=None, state=None):
         super(MirrorProxy, self).__init__()
         if not isinstance(listen_port, int) or not  1024 <= listen_port <= 65535:
             raise ValueError('Specified port "%s" is invalid.' % listen_port)
@@ -31,8 +34,10 @@ class MirrorProxy(multiprocessing.Process):
             raise
         self.kill_signal = multiprocessing.Value('i', False)
         self.logger = logger
+        self.state = state
 
     def run(self):
+        last_sync = 0
         try:
             while not self.kill_signal.value:
                 try:
@@ -40,6 +45,13 @@ class MirrorProxy(multiprocessing.Process):
                 except socket.timeout:
                     continue
                 self.sock.sendto(data, addr)
+                if self.state:
+                    self.state.add(packets_in=1, bytes_in=len(data),
+                            packets_out=1, bytes_out=len(data))
+                    now = time.time()
+                    if now - last_sync >= SYNC_INTERVAL:
+                        self.state.set_clients({addr_key(addr): {'role': 'sender', 'last_seen': now}})
+                        last_sync = now
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.port}')
         except:
