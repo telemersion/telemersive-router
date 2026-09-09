@@ -22,15 +22,19 @@ cd manager
 cd manager
 ```
 
-Copy `access.js.template` to `access.js` and adjust credentials:
+Copy `access.js.template` to `access.js` and fill in the broker's address and the
+credentials of the account the manager connects with — the same user that
+`broker/acl.conf` grants access to:
 
-```
-module.exports.broker_url = 'telemersive.zhdk.ch';
+```js
+module.exports.broker_url = '<broker url>';
 module.exports.broker_port = 3883;
 module.exports.switch_port = 3591;
-module.exports.user = 'manager';
-module.exports.pwd = 'manager';
+module.exports.user = '<broker user>';
+module.exports.pwd = '<broker password>';
 ```
+
+`access.js` is gitignored, so the real values stay out of the repository.
 
 ## Update
 
