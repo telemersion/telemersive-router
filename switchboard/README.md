@@ -81,7 +81,7 @@ sudo systemctl status telemersive-switchboard.service
 ### Logging
 The service logs accesses to `/var/log/telemersive-swtichboard/access.log` and other messages to `/var/log/telemersive-switchboard/error.log`.
 
-Note that this is where the proxies log too, so a relay reporting trouble shows up in `error.log` and not in `journalctl -u telemersive-switchboard`.
+Note that this is where the proxies log too, so a relay reporting trouble shows up in `error.log` and not in `journalctl -u telemersive-switchboard` — the journal only holds systemd's own entries for this service. See [Debugging a running router](../docs/debugging.md) for what the messages mean and how to trace a problem across both services.
 
 ## Tests
 

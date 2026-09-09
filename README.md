@@ -26,6 +26,10 @@ kept alive and torn down across the manager and the switchboard, how a room's
 ports are laid out, and which failure modes the two services can and cannot
 detect.
 
+[Debugging a running router](./docs/debugging.md) covers where each service
+writes its log — the switchboard's is not in `journalctl` — how to ask a running
+switchboard what it is doing, and how to work out why a room lost its media.
+
 ## Usage
 
 To manage the services, replace telemersive-XXXX with 
