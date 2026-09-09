@@ -23,16 +23,36 @@ systemd's own entries — the service starting, stopping, and the processes it
 killed on the way. A switchboard journal that looks empty during an incident is
 normal and means nothing.
 
-So an incident normally needs two logs side by side:
+So an incident normally needs two logs side by side. Pulling them from the
+server, with `<url>` being the router's host:
 
 ```bash
-journalctl -u telemersive-manager --since "10:00" --until "11:00"
-sed -n '/Sep  9 10:00/,/Sep  9 11:00/p' /var/log/telemersive-switchboard/error.log
+# the manager: rooms, peers, port build commands
+ssh -A root@<url> "sudo journalctl -u telemersive-manager.service -n 2000" | pbcopy
+
+# what the switchboard and its relays actually logged
+ssh -A root@<url> "sudo tail -n 2000 /var/log/telemersive-switchboard/error.log" | pbcopy
+
+# only the switchboard's service events - starts, stops, processes killed on the
+# way. this is the one that looks empty during an incident.
+ssh -A root@<url> "sudo journalctl -u telemersive-switchboard.service -n 2000" | pbcopy
 ```
+
+For an incident at a known time, a window reads better than a line count, and
+keeps both logs on the same clock:
+
+```bash
+ssh -A root@<url> "sudo journalctl -u telemersive-manager.service --since '10:00' --until '11:00'"
+```
+
+`pbcopy` puts it on the clipboard on macOS; use `xclip -selection clipboard` on
+Linux, or drop the pipe and redirect to a file. To watch a session live, replace
+`-n 2000` with `-f` (and `tail -n` with `tail -f` for the switchboard).
 
 ## Asking the running system
 
-Often quicker than reading logs. The switchboard answers on port 3591:
+Often quicker than reading logs. The switchboard answers on port 3591, on the
+router itself:
 
 ```bash
 # what is it running, and has it been restarted?
@@ -44,6 +64,16 @@ curl -s http://localhost:3591/rooms/Taipei-Zurich/state
 # one port in detail
 curl -s http://localhost:3591/proxies/12002/state
 ```
+
+From your own machine, the same over ssh — piped through `python3 -m json.tool`
+because the answers are dense:
+
+```bash
+ssh -A root@<url> "curl -s http://localhost:3591/health" | python3 -m json.tool
+```
+
+Whether port 3591 is reachable from outside the host depends on how the
+switchboard was locked down at install time, so going through ssh always works.
 
 `instance` in `/health` changes whenever the switchboard process restarts. If it
 differs from what you saw earlier, every proxy was forgotten and rebuilt. `rooms`
@@ -86,58 +116,66 @@ router — NAT, firewall, or the Gateway sending somewhere else.
 
 **Switchboard** (`error.log`):
 
-```
+```text
 [WARNING] Revive proxy: '12042' 'one2manyMo' 'Taipei-Zurich' (attempt 1 of 5)
 ```
+
 A relay died and was restarted. Once is unremarkable; the same port climbing
 towards 5 is a real fault, and the exception that caused it is logged just above.
 
-```
+```text
 [ERROR]   Error while relaying, recovering (3/10)
 [ERROR]   Oops, something went wrong!
 ```
+
 A relay hit an error and kept going. Reaching 10 in a row ends the process, and
 the supervisor then revives it.
 
-```
+```text
 [WARNING] Could not reach the shared state manager. Client list reporting is now
           disabled for this proxy, packet relaying continues.
 ```
+
 All relays share one state manager, used only to report their client lists. This
 says reporting is off for that relay — **media is unaffected**, but `clients` in
 the state endpoint will be empty for it from then on. Many of these at once means
 the shared manager died, which is worth investigating even though nothing broke.
 
-```
+```text
 [WARNING] Switchboard is gone, stopping proxy on 12042
 ```
+
 The relay noticed its parent had disappeared and shut itself down, rather than
 staying behind as an orphan holding the port.
 
-```
+```text
 [WARNING] Reap proxy:  '12042' 'one2manyMo' 'Taipei-Zurich' (process is gone)
 ```
+
 A request arrived for a port whose proxy had died; the dead entry was cleared so
 the port could be used again.
 
 **Manager** (`journalctl -u telemersive-manager`):
 
-```
+```text
   <- switchboard was restarted - it has forgotten the ports of 2 room(s)
         -> room 'Taipei-Zurich' is missing 82 port(s) on the switchboard - sending 82 of them again
         <- restored 82 of 82 port(s) for room Taipei-Zurich
 ```
+
 Normal recovery after a switchboard restart. `restored 81 of 82` means one port
 would not start — the reason is in `error.log`.
 
-```
+```text
         <- giving up on port 12900 of room 'Taipei-Zurich' after 3 attempts
 ```
+
 The manager stopped trying to create a port. Requires a person.
 
-```
+```text
     -> peer 'X' not joined anymore - reject from room
 ```
+
 A peer answered a room ping while no longer on the joined list, usually because
 it was evicted moments earlier. Occasional occurrences are normal; a peer stuck
 in this state is a Gateway-side problem.
