@@ -107,6 +107,33 @@ sudo ./switchboard/switchboard-service-uninstall.sh.sh
 
 ## JSON API description
 
+### Check the switchboard itself
+
+`<base>/health` summarises what this switchboard is running:
+
+```bash
+curl --request GET http://localhost:3591/health
+```
+
+```json
+{
+  "status": "OK",
+  "instance": "9bfb7c56-9ce4-49a8-b2f9-18895aa3af6b",
+  "uptime": 1834.221,
+  "proxies": 164,
+  "rooms": {"Taipei-Zurich": 82, "rehearsal": 82}
+}
+```
+
+Proxies exist only in memory, so `instance` is the useful field: it is generated
+when the process starts, and a caller that sees a value different from the one
+it saw before knows the switchboard has restarted and has forgotten every proxy
+it was asked to run. `rooms` gives the number of proxies held per room, which is
+enough to notice that a room is missing some without fetching the details.
+
+This is what the telemersive-manager polls to decide whether it has to send its
+build commands again.
+
 ### Start a new proxy
 
 A new proxy process is launched by sending a HTTP `POST` request with POST data

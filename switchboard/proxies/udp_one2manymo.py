@@ -11,7 +11,7 @@ import socket
 import sys
 import time
 
-from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS
+from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS, ParentWatch
 
 class One2ManyMoProxy(multiprocessing.Process):
     """
@@ -65,9 +65,13 @@ class One2ManyMoProxy(multiprocessing.Process):
     def run(self):
         last_sync = 0
         errors = 0
+        parent = ParentWatch()
         try:
             while not self.kill_signal.value:
                 try:
+                    if parent.orphaned():
+                        self.logger.warning('Switchboard is gone, stopping proxy on %s', self.listen_port)
+                        break
                     # handle incoming packets from sink clients
                     while True:
                         try:

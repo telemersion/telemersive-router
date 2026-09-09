@@ -8,6 +8,8 @@ Flask process while the proxy itself runs in a separate process.
 
 import logging
 import multiprocessing
+import os
+import time
 
 COUNTER_NAMES = ('packets_in', 'bytes_in', 'packets_out', 'bytes_out')
 
@@ -18,6 +20,37 @@ SYNC_INTERVAL = 1
 # transient error must not kill a running proxy, but a permanently broken one
 # should not spin forever either.
 MAX_CONSECUTIVE_ERRORS = 10
+
+# how often a relay checks that the switchboard it was forked from still exists
+PARENT_CHECK_INTERVAL = 2
+
+
+class ParentWatch:
+    """
+    Lets a relay notice that the switchboard process it belongs to is gone.
+
+    A relay is forked from the switchboard, but nothing takes it down when its
+    parent dies: gunicorn signals only the worker process, so the relay would
+    carry on as an orphan while still holding its port. The switchboard could
+    then never bind that port again, and since a restarted switchboard cannot
+    adopt a process it did not fork, the port would stay unusable until the
+    orphan is killed by hand.
+
+    Checked on a timer rather than per packet, so it costs nothing noticeable
+    on a relay carrying video.
+    """
+
+    def __init__(self, interval=PARENT_CHECK_INTERVAL):
+        self.parent_pid = os.getppid()
+        self.interval = interval
+        self.last_check = time.time()
+
+    def orphaned(self):
+        now = time.time()
+        if now - self.last_check < self.interval:
+            return False
+        self.last_check = now
+        return os.getppid() != self.parent_pid
 
 
 def addr_key(addr):

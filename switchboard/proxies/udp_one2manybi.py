@@ -12,7 +12,7 @@ import socket
 import sys
 import time
 
-from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS
+from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS, ParentWatch
 
 class One2ManyBiProxy(multiprocessing.Process):
     """
@@ -51,10 +51,14 @@ class One2ManyBiProxy(multiprocessing.Process):
     def run(self):
         last_sync = 0
         errors = 0
+        parent = ParentWatch()
         try:
             listening_sockets = [self.source, self.sink]
             while not self.kill_signal.value:
                 try:
+                    if parent.orphaned():
+                        self.logger.warning('Switchboard is gone, stopping proxy on %s', self.listen_port)
+                        break
                     readables, _w, _x = select.select(listening_sockets, [], [], 0.1)
                     for sock in readables:
                         if sock.getsockname()[1] == self.many_port:

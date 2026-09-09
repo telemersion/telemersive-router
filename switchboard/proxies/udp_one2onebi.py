@@ -11,7 +11,7 @@ import socket
 import sys
 import time
 
-from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS
+from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS, ParentWatch
 
 
 class One2OneBiProxy(multiprocessing.Process):
@@ -40,11 +40,15 @@ class One2OneBiProxy(multiprocessing.Process):
     def run(self):
         last_sync = 0
         errors = 0
+        parent = ParentWatch()
         try:
             client1 = None
             client2 = None
             while not self.kill_signal.value:
                 try:
+                    if parent.orphaned():
+                        self.logger.warning('Switchboard is gone, stopping proxy on %s', self.port)
+                        break
                     try:
                         data, addr = self.sock.recvfrom(65536)
                     except socket.timeout:

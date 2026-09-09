@@ -11,6 +11,7 @@ import multiprocessing
 import sys
 import threading
 import time
+import uuid
 import proxies
 from flask import Flask, json, Response, request
 
@@ -39,6 +40,12 @@ supervisor_interval = 5
 # how often the supervisor revives the same port before it leaves it alone. a
 # proxy that dies immediately every time will not be restarted forever.
 max_proxy_revivals = 5
+
+# identifies this switchboard process. proxies only live in memory, so a client
+# that sees a different instance than before knows the switchboard has restarted
+# and has forgotten every proxy it was asked to run.
+instance_id = str(uuid.uuid4())
+started_at = time.time()
 
 port_range = range(10000, 32768)
 baseroute = '/proxies/'
@@ -303,7 +310,17 @@ def start_proxy():
         if obj is None:
             response = {'status': 'Error', 'msg': 'An unknown error occurred'}
             return r(json.dumps(response), 422)
-        obj.start()
+        try:
+            obj.start()
+        except Exception as err:
+            # starting can fail for reasons the constructor cannot see, e.g. the
+            # open stage control binary missing. answer with the reason instead
+            # of letting it become a 500 with an html page, which tells the
+            # caller nothing about what actually went wrong.
+            app.logger.exception('Could not start proxy on port %s', proxydef['port'])
+            release_sockets(obj)
+            response = {'status': 'Error', 'msg': str(err)}
+            return r(json.dumps(response), 422)
         myproxies[proxydef['port']] = {
             'obj': obj,
             'state': state,
@@ -332,6 +349,28 @@ def stop_proxy(port):
         except KeyError:
             response = {'status': 'OK', 'msg': 'Proxy is not running'}
             return r(json.dumps(response))
+
+@app.route('/health', methods=['GET'])
+def health():
+    """
+    Summary of what this switchboard is currently running.
+
+    'instance' changes whenever the switchboard process is restarted, which is
+    the signal that everything it was asked to run has been forgotten and needs
+    to be requested again. 'rooms' maps each room to the number of proxies held
+    for it, which is enough to tell whether a room is missing any - the details
+    are in <base>/rooms/<room>.
+    """
+    rooms = {}
+    for _port, proxy in snapshot():
+        rooms[proxy['room']] = rooms.get(proxy['room'], 0) + 1
+    return r(json.dumps({
+        'status': 'OK',
+        'instance': instance_id,
+        'uptime': round(time.time() - started_at, 3),
+        'proxies': sum(rooms.values()),
+        'rooms': rooms
+    }))
 
 @app.route(baseroute, methods=['GET'])
 def list_proxies():

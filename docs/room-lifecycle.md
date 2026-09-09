@@ -11,18 +11,18 @@ that package's `lib/BusManager.js`.
 
 ## Two services, two views of the world
 
-The two services keep entirely separate state and are connected by one-way
-HTTP. The manager never learns anything back about a proxy after it has been
-created.
+The two services keep entirely separate state, connected only by HTTP. The
+manager decides what should exist; the switchboard decides whether what exists
+is healthy.
 
 ```
   Gateway peers
        │  MQTT (mosquitto broker)
        ▼
-  ┌─────────────────────┐   HTTP POST/DELETE   ┌──────────────────────┐
+  ┌─────────────────────┐   POST / DELETE →    ┌──────────────────────┐
   │  manager            │ ───────────────────► │  switchboard         │
-  │  (telemersive-bus)  │                      │  (Flask/gunicorn)    │
-  │                     │                      │                      │
+  │  (telemersive-bus)  │ ◄─────────────────── │  (Flask/gunicorn)    │
+  │                     │    ← GET /health     │                      │
   │  this.rooms{}       │                      │  myproxies{}         │
   │  which rooms exist  │                      │  which ports are     │
   │  and who joined     │                      │  registered          │
@@ -56,9 +56,10 @@ four, plus two for Open Stage Control:
 | Open Stage Control relay | `id*1000 + 902` | same | `many2manyBi` |
 | Open Stage Control UI | `id*1000 + 900` | `id*1000 + 902` | `OpenStageControl` |
 
-Each `POST /proxies/` is sent and awaited individually. Failures are logged per
-port and never rolled back, so a room can come up 81 of 82 without anything
-reporting the room as unhealthy.
+Each `POST /proxies/` is sent and awaited individually, and a room is never
+rolled back if some of them fail — it simply comes up with fewer ports than it
+should. Failed calls are retried once at creation, and anything still missing is
+named in the log and picked up again by the health check below.
 
 ## Birth
 
@@ -71,8 +72,7 @@ reporting the room as unhealthy.
 
 ## Steady state
 
-Three liveness mechanisms run side by side. They measure different things and
-never compare notes.
+Four liveness mechanisms run side by side, each measuring something different.
 
 **Peer liveness — manager, over MQTT.** A kill list, rebuilt from scratch every
 cycle. `startHousekeeping` clears `peerHousekeep`, subscribes to the retained
@@ -87,6 +87,14 @@ by the time of their last packet and forgets them after 10s of silence. Gateways
 send heartbeats well inside that window; a payload-less OSC `/hb` packet counts
 as a heartbeat without being forwarded. Self-correcting.
 
+**Switchboard liveness — the manager, on its own timer.** Every
+`switchBoardCheckInterval` the manager reads `GET /health`. A changed `instance`
+means the switchboard restarted and forgot everything; a room holding fewer
+proxies than it should means some were never created. Either way the manager
+re-sends only the ports the switchboard does not have. This deliberately does
+not run inside housekeeping, which only fires on peer join and leave and can go
+an hour without a cycle while a performance is under way.
+
 **Proxy liveness — the switchboard's own supervisor.** A background thread
 checks every `supervisor_interval` seconds that each registered proxy is still
 running and restarts the ones that are not, up to `max_proxy_revivals` times per
@@ -94,11 +102,9 @@ port so a proxy that cannot survive is not restarted forever. A revived proxy
 binds its port again and the peers re-register with it on their next packet.
 `GET /proxies/<port>/state` reports `revivals` alongside `running` and `pid`.
 
-The manager still never asks. It has no way of knowing whether a room's ports
-are up, and its belief that they are is not a measurement but a memory of
-having POSTed them successfully. The supervisor closes that gap from the
-switchboard side only: it can restore a room's ports, but only the manager
-could notice that a room is missing ports it never managed to create.
+Note what the manager deliberately does *not* look at: whether a proxy is
+running. It reads only which ports the switchboard holds. Health is the
+switchboard's to judge and to act on — see the table at the end.
 
 ## Death
 
@@ -159,11 +165,29 @@ are reduced to safe characters before being used as a path — a name containing
 shell metacharacters used to be interpreted as a command, because the session
 template was copied with `os.system`. It is copied directly now.
 
-## Still missing
+**The switchboard is restarted while rooms are live.** Every relay dies with it
+and `myproxies` comes back empty, while the rooms themselves carry on: peers
+keep answering their pings, no room is torn down, and nothing would ask for the
+ports again. The manager therefore polls `GET /health` on its own timer, and
+when the `instance` it sees differs from the one before — or a room holds fewer
+proxies than it should — it sends the build commands for the missing ports
+again. Restarting the switchboard mid-session is now a gap of seconds rather
+than something that lasts until every peer has left.
 
-The manager never verifies that the ports it asked for exist. The switchboard's
-supervisor can restore a proxy that died, but it only knows about proxies that
-were registered in the first place — if a `POST` failed during room creation,
-that port is simply absent, and nothing on either side will ever notice. A
-reconciliation pass in the manager, comparing `GET /rooms/<room>` against the
-82 proxies it believes it created, would close that remaining gap.
+## Who repairs what
+
+Each failure mode has exactly one owner, which is what keeps the two services
+from undoing each other:
+
+| failure | noticed by | repaired by |
+| --- | --- | --- |
+| a relay dies | switchboard supervisor | switchboard, up to `max_proxy_revivals` |
+| a relay cannot be kept alive | switchboard, after giving up | nobody — reported as `running: false` for a person to act on |
+| a `POST` failed at room creation | manager, from the failed call | manager, retried immediately |
+| the switchboard was restarted | manager, from `instance` | manager, re-sends the room's build commands |
+
+The rule underneath the table: **the manager only ever sends ports the
+switchboard does not have.** A port it holds but is not running is the
+switchboard's business, including its decision to stop trying. Re-sending such a
+port would reap the entry and reset its revival count, and the two services
+would restart the same broken proxy forever.
