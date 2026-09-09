@@ -12,7 +12,7 @@ import socket
 import sys
 import time
 
-from proxies.state import addr_key, SYNC_INTERVAL
+from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS
 
 class One2ManyBiProxy(multiprocessing.Process):
     """
@@ -50,62 +50,74 @@ class One2ManyBiProxy(multiprocessing.Process):
 
     def run(self):
         last_sync = 0
+        errors = 0
         try:
             listening_sockets = [self.source, self.sink]
             while not self.kill_signal.value:
-                readables, _w, _x = select.select(listening_sockets, [], [], 0.1)
-                for sock in readables:
-                    if sock.getsockname()[1] == self.many_port:
-                        # many sends back to one
-                        many_data, many_addr = sock.recvfrom(65536)
-                        self.active_endpoints[many_addr] = time.time()
-                        if self.state:
-                            self.state.add(packets_in=1, bytes_in=len(many_data))
-                        if self.heartbeat_sequence != many_data[:len(self.heartbeat_sequence)]:
-                            try:
-                                self.active_endpoints[one_addr]
-                            except KeyError:
-                                # Do nothing after ithe 'one' endpoint has expired
-                                continue
-                            except UnboundLocalError:
-                                continue
-                            if (self.active_endpoints[one_addr] + self.timeout) < time.time():
-                                del self.active_endpoints[one_addr]
-                            else:
+                try:
+                    readables, _w, _x = select.select(listening_sockets, [], [], 0.1)
+                    for sock in readables:
+                        if sock.getsockname()[1] == self.many_port:
+                            # many sends back to one
+                            many_data, many_addr = sock.recvfrom(65536)
+                            self.active_endpoints[many_addr] = time.time()
+                            if self.state:
+                                self.state.add(packets_in=1, bytes_in=len(many_data))
+                            if self.heartbeat_sequence != many_data[:len(self.heartbeat_sequence)]:
                                 try:
-                                    self.source.sendto(many_data, one_addr)
-                                    if self.state:
-                                        self.state.add(packets_out=1, bytes_out=len(many_data))
-                                except BlockingIOError:
+                                    self.active_endpoints[one_addr]
+                                except KeyError:
+                                    # Do nothing after ithe 'one' endpoint has expired
                                     continue
-                    elif sock.getsockname()[1] == self.listen_port:
-                        # one sends to many
-                        one_data, one_addr = sock.recvfrom(65536)
-                        self.active_endpoints[one_addr] = time.time()
-                        if self.state:
-                            self.state.add(packets_in=1, bytes_in=len(one_data))
-                        if self.heartbeat_sequence != one_data[:len(self.heartbeat_sequence)]:
-                            many_list = list(self.active_endpoints.keys())
-                            many_list.remove(one_addr)
-                            for many_addr in many_list:
-                                if (self.active_endpoints[many_addr] + self.timeout) < time.time():
-                                    del self.active_endpoints[many_addr]
+                                except UnboundLocalError:
+                                    continue
+                                if (self.active_endpoints[one_addr] + self.timeout) < time.time():
+                                    del self.active_endpoints[one_addr]
                                 else:
                                     try:
-                                        self.sink.sendto(one_data, many_addr)
+                                        self.source.sendto(many_data, one_addr)
                                         if self.state:
-                                            self.state.add(packets_out=1, bytes_out=len(one_data))
+                                            self.state.add(packets_out=1, bytes_out=len(many_data))
                                     except BlockingIOError:
                                         continue
-                    else:
-                        print('We should not ever reach that point')
-                if self.state:
-                    now = time.time()
-                    if now - last_sync >= SYNC_INTERVAL:
-                        clients = {addr_key(addr): {'role': 'peer', 'last_seen': ts}
-                                for addr, ts in self.active_endpoints.items()}
-                        self.state.set_clients(clients)
-                        last_sync = now
+                        elif sock.getsockname()[1] == self.listen_port:
+                            # one sends to many
+                            one_data, one_addr = sock.recvfrom(65536)
+                            self.active_endpoints[one_addr] = time.time()
+                            if self.state:
+                                self.state.add(packets_in=1, bytes_in=len(one_data))
+                            if self.heartbeat_sequence != one_data[:len(self.heartbeat_sequence)]:
+                                many_list = list(self.active_endpoints.keys())
+                                many_list.remove(one_addr)
+                                for many_addr in many_list:
+                                    if (self.active_endpoints[many_addr] + self.timeout) < time.time():
+                                        del self.active_endpoints[many_addr]
+                                    else:
+                                        try:
+                                            self.sink.sendto(one_data, many_addr)
+                                            if self.state:
+                                                self.state.add(packets_out=1, bytes_out=len(one_data))
+                                        except BlockingIOError:
+                                            continue
+                        else:
+                            print('We should not ever reach that point')
+                    if self.state:
+                        now = time.time()
+                        if now - last_sync >= SYNC_INTERVAL:
+                            clients = {addr_key(addr): {'role': 'peer', 'last_seen': ts}
+                                    for addr, ts in self.active_endpoints.items()}
+                            self.state.set_clients(clients)
+                            last_sync = now
+                    errors = 0
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except:
+                    # a single failed iteration must not end the proxy
+                    errors += 1
+                    self.logger.exception('Error while relaying, recovering (%s/%s)',
+                            errors, MAX_CONSECUTIVE_ERRORS, extra={'stack': True})
+                    if errors >= MAX_CONSECUTIVE_ERRORS:
+                        raise
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.listen_port}')
         except:

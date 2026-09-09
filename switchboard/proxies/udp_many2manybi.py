@@ -11,7 +11,7 @@ import socket
 import sys
 import time
 
-from proxies.state import addr_key, SYNC_INTERVAL
+from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS
 
 class Many2ManyBiProxy(multiprocessing.Process):
     """
@@ -42,11 +42,39 @@ class Many2ManyBiProxy(multiprocessing.Process):
 
     def run(self):
         last_sync = 0
+        errors = 0
         try:
             while not self.kill_signal.value:
                 try:
-                    my_data, my_addr = self.sock.recvfrom(65536)
-                except socket.timeout:
+                    try:
+                        my_data, my_addr = self.sock.recvfrom(65536)
+                    except socket.timeout:
+                        if self.state:
+                            now = time.time()
+                            if now - last_sync >= SYNC_INTERVAL:
+                                clients = {addr_key(addr): {'role': 'peer', 'last_seen': ts}
+                                        for addr, ts in self.active_endpoints.items()}
+                                self.state.set_clients(clients)
+                                last_sync = now
+                        continue
+                    self.active_endpoints[my_addr] = time.time()
+                    if self.state:
+                        self.state.add(packets_in=1, bytes_in=len(my_data))
+                    if self.heartbeat_sequence != my_data[:len(self.heartbeat_sequence)]:
+                        other_clients = list(self.active_endpoints.keys())
+                        other_clients.remove(my_addr)
+                        for addr in other_clients:
+                            if ((addr[0] != '127.0.0.1') and
+                                (self.active_endpoints[addr] + self.timeout) <
+                                time.time()):
+                                del self.active_endpoints[addr]
+                            else:
+                                try:
+                                    self.sock.sendto(my_data, addr)
+                                    if self.state:
+                                        self.state.add(packets_out=1, bytes_out=len(my_data))
+                                except BlockingIOError:
+                                    continue
                     if self.state:
                         now = time.time()
                         if now - last_sync >= SYNC_INTERVAL:
@@ -54,32 +82,16 @@ class Many2ManyBiProxy(multiprocessing.Process):
                                     for addr, ts in self.active_endpoints.items()}
                             self.state.set_clients(clients)
                             last_sync = now
-                    continue
-                self.active_endpoints[my_addr] = time.time()
-                if self.state:
-                    self.state.add(packets_in=1, bytes_in=len(my_data))
-                if self.heartbeat_sequence != my_data[:len(self.heartbeat_sequence)]:
-                    other_clients = list(self.active_endpoints.keys())
-                    other_clients.remove(my_addr)
-                    for addr in other_clients:
-                        if ((addr[0] != '127.0.0.1') and
-                            (self.active_endpoints[addr] + self.timeout) <
-                            time.time()):
-                            del self.active_endpoints[addr]
-                        else:
-                            try:
-                                self.sock.sendto(my_data, addr)
-                                if self.state:
-                                    self.state.add(packets_out=1, bytes_out=len(my_data))
-                            except BlockingIOError:
-                                continue
-                if self.state:
-                    now = time.time()
-                    if now - last_sync >= SYNC_INTERVAL:
-                        clients = {addr_key(addr): {'role': 'peer', 'last_seen': ts}
-                                for addr, ts in self.active_endpoints.items()}
-                        self.state.set_clients(clients)
-                        last_sync = now
+                    errors = 0
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except:
+                    # a single failed iteration must not end the proxy
+                    errors += 1
+                    self.logger.exception('Error while relaying, recovering (%s/%s)',
+                            errors, MAX_CONSECUTIVE_ERRORS, extra={'stack': True})
+                    if errors >= MAX_CONSECUTIVE_ERRORS:
+                        raise
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.port}')
         except:

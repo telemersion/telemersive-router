@@ -78,6 +78,48 @@ def get_state_of_room(room):
             state_of_room[key] = state_format(myproxies[key])
     return state_of_room
 
+def release_sockets(obj):
+    """
+    Close a proxy's sockets in this process.
+
+    Proxy sockets are opened in the proxy's __init__, which runs here in the
+    switchboard - the relay process only inherits them across the fork. So when
+    a relay exits, its port stays bound by our own copy of the socket until the
+    object happens to be garbage collected. Closing explicitly makes releasing
+    the port deterministic instead of depending on refcount timing.
+    """
+    for name in ('sock', 'source', 'sink'):
+        sock = getattr(obj, name, None)
+        if sock is None:
+            continue
+        try:
+            sock.close()
+        except Exception:
+            app.logger.exception("Could not close '%s' socket", name)
+
+def reap_dead_proxy(port):
+    """
+    Drop the bookkeeping entry of a proxy whose process is gone.
+
+    An entry in myproxies only records that a proxy was started once, it says
+    nothing about whether it is still running. Without reaping, a proxy that
+    died would keep answering 'already running' for its own port and could
+    never be replaced - the port would stay dead until the whole room is torn
+    down and recreated, which needs every peer to leave the room first.
+    """
+    proxy = myproxies.get(port)
+    if proxy is None or proxy['obj'].is_alive():
+        return False
+    app.logger.warning("Reap proxy:  '%s' '%s' '%s' (process is gone)",
+            port, proxy['type'], proxy['room'])
+    try:
+        proxy['obj'].join()
+    except Exception:
+        app.logger.exception('Could not join dead proxy on port %s', port)
+    release_sockets(proxy['obj'])
+    del myproxies[port]
+    return True
+
 @app.route(baseroute, methods=['POST'])
 def start_proxy():
     proxydef = request.get_json()
@@ -134,27 +176,30 @@ def start_proxy():
         response = {'status': 'Error', 'msg': 'No room specified'}
         return r(json.dumps(response), 422)
     # Done input sanitizing
+    # if a proxy previously started on this port has died, clear it out first so
+    # this request can replace it instead of being rejected by its corpse.
+    reap_dead_proxy(proxydef['port'])
     try:
         myproxies[proxydef['port']]
     except KeyError:
         state = None
         try:
             if proxydef['type'] == 'mirror':
-                state = proxies.ProxyState(state_manager)
+                state = proxies.ProxyState(state_manager, app.logger)
                 obj = proxies.MirrorProxy(listen_port=proxydef['port'], logger=app.logger, state=state)
             elif proxydef['type'] == 'one2oneBi':
-                state = proxies.ProxyState(state_manager)
+                state = proxies.ProxyState(state_manager, app.logger)
                 obj = proxies.One2OneBiProxy(listen_port=proxydef['port'], logger=app.logger, state=state)
             elif proxydef['type'] == 'one2manyMo':
-                state = proxies.ProxyState(state_manager)
+                state = proxies.ProxyState(state_manager, app.logger)
                 obj = proxies.One2ManyMoProxy(listen_port=proxydef['port'], many_port=many_port,
                         logger=app.logger, state=state)
             elif proxydef['type'] == 'one2manyBi':
-                state = proxies.ProxyState(state_manager)
+                state = proxies.ProxyState(state_manager, app.logger)
                 obj = proxies.One2ManyBiProxy(listen_port=proxydef['port'], many_port=many_port,
                         logger=app.logger, state=state)
             elif proxydef['type'] == 'many2manyBi':
-                state = proxies.ProxyState(state_manager)
+                state = proxies.ProxyState(state_manager, app.logger)
                 obj = proxies.Many2ManyBiProxy(listen_port=proxydef['port'], logger=app.logger, state=state)
             elif proxydef['type'] == 'OpenStageControl':
                 obj = proxies.OpenStageControl(http_port=proxydef['port'], osc_port=many_port,
@@ -189,6 +234,7 @@ def stop_proxy(port):
         myproxies[port]['obj'].stop()
         myproxies[port]['obj'].join()
         app.logger.info("Stop proxy:  '%s' '%s' '%s'", port, myproxies[port]['type'], myproxies[port]['room'])
+        release_sockets(myproxies[port]['obj'])
         del myproxies[port]
         response = {'status': 'OK', 'msg': 'Proxy successfully stopped'}
         return r(json.dumps(response))

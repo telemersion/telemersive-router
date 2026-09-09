@@ -81,6 +81,24 @@ sudo systemctl status telemersive-switchboard.service
 ### Logging
 The service logs accesses to `/var/log/telemersive-swtichboard/access.log` and other messages to `/var/log/telemersive-switchboard/error.log`.
 
+Note that this is where the proxies log too, so a relay reporting trouble shows up in `error.log` and not in `journalctl -u telemersive-switchboard`.
+
+## Tests
+
+`tests/` holds automated tests for the proxy lifecycle and for the failure modes described in [Room lifecycle](../docs/room-lifecycle.md). They need only python3 and the switchboard's own dependencies, bind localhost UDP ports in the 31990 range, and can be run without installing the service:
+
+```bash
+./tests/run-tests.sh
+```
+
+Pass a path to run them against a different checkout, which is useful to confirm that a fix really addresses the behaviour it claims to:
+
+```bash
+./tests/run-tests.sh /tmp/some-older-checkout/switchboard
+```
+
+`tests/` also contains Pure Data patches (`test-one2many.pd`) for exercising proxy connections by hand.
+
 ## Uninstall
 
 ```bash

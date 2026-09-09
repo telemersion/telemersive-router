@@ -11,7 +11,7 @@ import socket
 import sys
 import time
 
-from proxies.state import addr_key, SYNC_INTERVAL
+from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS
 
 
 class One2OneBiProxy(multiprocessing.Process):
@@ -39,44 +39,56 @@ class One2OneBiProxy(multiprocessing.Process):
 
     def run(self):
         last_sync = 0
+        errors = 0
         try:
             client1 = None
             client2 = None
             while not self.kill_signal.value:
                 try:
-                    data, addr = self.sock.recvfrom(65536)
-                except socket.timeout:
-                    continue
-
-                # Assigning clients
-                if addr != client1 and addr != client2:
-                    client1 = client2
-                    client2 = addr
-
-                if self.state:
-                    self.state.add(packets_in=1, bytes_in=len(data))
-
-                # transmit data
-                if client1 and client2:
                     try:
-                        if addr == client1:
-                            self.sock.sendto(data, client2)
-                        elif addr == client2:
-                            self.sock.sendto(data, client1)
-                        if self.state:
-                            self.state.add(packets_out=1, bytes_out=len(data))
-                    except BlockingIOError:
+                        data, addr = self.sock.recvfrom(65536)
+                    except socket.timeout:
                         continue
 
-                if self.state:
-                    now = time.time()
-                    if now - last_sync >= SYNC_INTERVAL:
-                        clients = {}
-                        for client in (client1, client2):
-                            if client:
-                                clients[addr_key(client)] = {'role': 'peer', 'last_seen': now}
-                        self.state.set_clients(clients)
-                        last_sync = now
+                    # Assigning clients
+                    if addr != client1 and addr != client2:
+                        client1 = client2
+                        client2 = addr
+
+                    if self.state:
+                        self.state.add(packets_in=1, bytes_in=len(data))
+
+                    # transmit data
+                    if client1 and client2:
+                        try:
+                            if addr == client1:
+                                self.sock.sendto(data, client2)
+                            elif addr == client2:
+                                self.sock.sendto(data, client1)
+                            if self.state:
+                                self.state.add(packets_out=1, bytes_out=len(data))
+                        except BlockingIOError:
+                            continue
+
+                    if self.state:
+                        now = time.time()
+                        if now - last_sync >= SYNC_INTERVAL:
+                            clients = {}
+                            for client in (client1, client2):
+                                if client:
+                                    clients[addr_key(client)] = {'role': 'peer', 'last_seen': now}
+                            self.state.set_clients(clients)
+                            last_sync = now
+                    errors = 0
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except:
+                    # a single failed iteration must not end the proxy
+                    errors += 1
+                    self.logger.exception('Error while relaying, recovering (%s/%s)',
+                            errors, MAX_CONSECUTIVE_ERRORS, extra={'stack': True})
+                    if errors >= MAX_CONSECUTIVE_ERRORS:
+                        raise
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.port}')
         except:

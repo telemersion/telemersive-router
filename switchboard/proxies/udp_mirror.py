@@ -11,7 +11,7 @@ import socket
 import sys
 import time
 
-from proxies.state import addr_key, SYNC_INTERVAL
+from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS
 
 
 class MirrorProxy(multiprocessing.Process):
@@ -38,20 +38,32 @@ class MirrorProxy(multiprocessing.Process):
 
     def run(self):
         last_sync = 0
+        errors = 0
         try:
             while not self.kill_signal.value:
                 try:
-                    data, addr = self.sock.recvfrom(65536)
-                except socket.timeout:
-                    continue
-                self.sock.sendto(data, addr)
-                if self.state:
-                    self.state.add(packets_in=1, bytes_in=len(data),
-                            packets_out=1, bytes_out=len(data))
-                    now = time.time()
-                    if now - last_sync >= SYNC_INTERVAL:
-                        self.state.set_clients({addr_key(addr): {'role': 'sender', 'last_seen': now}})
-                        last_sync = now
+                    try:
+                        data, addr = self.sock.recvfrom(65536)
+                    except socket.timeout:
+                        continue
+                    self.sock.sendto(data, addr)
+                    if self.state:
+                        self.state.add(packets_in=1, bytes_in=len(data),
+                                packets_out=1, bytes_out=len(data))
+                        now = time.time()
+                        if now - last_sync >= SYNC_INTERVAL:
+                            self.state.set_clients({addr_key(addr): {'role': 'sender', 'last_seen': now}})
+                            last_sync = now
+                    errors = 0
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except:
+                    # a single failed iteration must not end the proxy
+                    errors += 1
+                    self.logger.exception('Error while relaying, recovering (%s/%s)',
+                            errors, MAX_CONSECUTIVE_ERRORS, extra={'stack': True})
+                    if errors >= MAX_CONSECUTIVE_ERRORS:
+                        raise
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.port}')
         except:

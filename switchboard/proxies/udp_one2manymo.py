@@ -11,7 +11,7 @@ import socket
 import sys
 import time
 
-from proxies.state import addr_key, SYNC_INTERVAL
+from proxies.state import addr_key, SYNC_INTERVAL, MAX_CONSECUTIVE_ERRORS
 
 class One2ManyMoProxy(multiprocessing.Process):
     """
@@ -64,51 +64,63 @@ class One2ManyMoProxy(multiprocessing.Process):
 
     def run(self):
         last_sync = 0
+        errors = 0
         try:
             while not self.kill_signal.value:
-                # handle incoming packets from sink clients
-                while True:
-                    try:
-                        _trash, sink_addr = self.sink.recvfrom(65536)
-                    except BlockingIOError:
-                        break
-                    self.sink_clients[sink_addr] = time.time()
-
-                # handle incoming packets from source client
                 try:
-                    data, addr = self.source.recvfrom(65536)
-                except socket.timeout:
+                    # handle incoming packets from sink clients
+                    while True:
+                        try:
+                            _trash, sink_addr = self.sink.recvfrom(65536)
+                        except BlockingIOError:
+                            break
+                        self.sink_clients[sink_addr] = time.time()
+
+                    # handle incoming packets from source client
+                    try:
+                        data, addr = self.source.recvfrom(65536)
+                    except socket.timeout:
+                        if self.state:
+                            now = time.time()
+                            if now - last_sync >= SYNC_INTERVAL:
+                                self.sync_state(now)
+                                last_sync = now
+                        continue
+
+                    self.source_client = addr
+                    self.source_last_seen = time.time()
+                    if self.state:
+                        self.state.add(packets_in=1, bytes_in=len(data))
+
+                    # remove expired clients from sink_clients
+                    for client, prev_ts in list(self.sink_clients.items()):
+                        if (prev_ts + self.timeout) < time.time():
+                            del self.sink_clients[client]
+
+                    # send data to remaining sink_clients
+                    for client in self.sink_clients.keys():
+                        try:
+                            self.sink.sendto(data, client)
+                            if self.state:
+                                self.state.add(packets_out=1, bytes_out=len(data))
+                        except BlockingIOError:
+                            continue
+
                     if self.state:
                         now = time.time()
                         if now - last_sync >= SYNC_INTERVAL:
                             self.sync_state(now)
                             last_sync = now
-                    continue
-
-                self.source_client = addr
-                self.source_last_seen = time.time()
-                if self.state:
-                    self.state.add(packets_in=1, bytes_in=len(data))
-
-                # remove expired clients from sink_clients
-                for client, prev_ts in list(self.sink_clients.items()):
-                    if (prev_ts + self.timeout) < time.time():
-                        del self.sink_clients[client]
-
-                # send data to remaining sink_clients
-                for client in self.sink_clients.keys():
-                    try:
-                        self.sink.sendto(data, client)
-                        if self.state:
-                            self.state.add(packets_out=1, bytes_out=len(data))
-                    except BlockingIOError:
-                        continue
-
-                if self.state:
-                    now = time.time()
-                    if now - last_sync >= SYNC_INTERVAL:
-                        self.sync_state(now)
-                        last_sync = now
+                    errors = 0
+                except (KeyboardInterrupt, SystemExit):
+                    raise
+                except:
+                    # a single failed iteration must not end the proxy
+                    errors += 1
+                    self.logger.exception('Error while relaying, recovering (%s/%s)',
+                            errors, MAX_CONSECUTIVE_ERRORS, extra={'stack': True})
+                    if errors >= MAX_CONSECUTIVE_ERRORS:
+                        raise
         except (KeyboardInterrupt, SystemExit):
             self.logger.warning(f'Shutting down proxy on {self.listen_port}')
         except:

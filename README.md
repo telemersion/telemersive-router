@@ -19,6 +19,13 @@ Install and configure the required services in this sequence:
 3. the [telemersive-manager](./manager/README.md).
 4. the [telemersive-nathelper](./nat-helper/README.md).
 
+## How it works
+
+[Room lifecycle](./docs/room-lifecycle.md) describes how a room is created,
+kept alive and torn down across the manager and the switchboard, how a room's
+ports are laid out, and which failure modes the two services can and cannot
+detect.
+
 ## Usage
 
 To manage the services, replace telemersive-XXXX with 
