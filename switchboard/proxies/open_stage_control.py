@@ -11,12 +11,30 @@ be already running on the port specified by the osc_port parameter.
 
 import logging
 import os
+import re
+import shutil
 import subprocess
 import signal
 import sys
 
 OSC_DEFAULT_SESSION_PATH = '/opt/open-stage-control/sessions/tsb_sessions'
 #OSC_DEFAULT_SESSION_PATH = '/home/roman/pd-src/tsb_sessions'
+
+# seconds to wait for the open stage control process to shut down on its own
+# before it is terminated and finally killed
+STOP_TIMEOUT = 5
+
+
+def safe_session_name(name):
+    """
+    Turn a room name into a name that is safe to use as a directory.
+
+    Room names are chosen by the clients and are not restricted to anything, so
+    they must not be used in a path as they are: a name containing '/' or '..'
+    would let a room write outside of the sessions directory.
+    """
+    cleaned = re.sub(r'[^A-Za-z0-9_-]', '_', name if name else 'default')
+    return cleaned if cleaned else 'default'
 
 # port: http port
 # many-port: many2manyBi proxy
@@ -44,15 +62,15 @@ class OpenStageControl:
             '--authentication',
             f'{session}:{session}'
         ]
-        self.session_name=session if session else 'default'
+        self.session_name = safe_session_name(session)
 
         self.logger = logger
         self.p = None
 
     def prepare_session_file(self):
-        session_dir = f'{OSC_DEFAULT_SESSION_PATH}/{self.session_name}'
-        self.session_path = f'{session_dir}/default.json'
-        template_session = f'{OSC_DEFAULT_SESSION_PATH}/template.json'
+        session_dir = os.path.join(OSC_DEFAULT_SESSION_PATH, self.session_name)
+        self.session_path = os.path.join(session_dir, 'default.json')
+        template_session = os.path.join(OSC_DEFAULT_SESSION_PATH, 'template.json')
         if not os.path.exists(session_dir):
             try:
                 os.mkdir(session_dir)
@@ -64,7 +82,10 @@ class OpenStageControl:
                 return
         if not os.path.exists(self.session_path):
             try:
-                os.system(f'cp {template_session} {self.session_path}')
+                # copied directly rather than through a shell: the session name
+                # comes from a room name and must never be interpreted as a
+                # command
+                shutil.copyfile(template_session, self.session_path)
             except OSError as error:
                 self.logger.exception('Could not copy template to session '
                     'directory')
@@ -80,18 +101,35 @@ class OpenStageControl:
         self.prepare_session_file()
         if self.session_path:
             self.cmd.extend(['--load', self.session_path])
-        self.p = subprocess.Popen(self.cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        # the output is discarded rather than piped: nothing reads a pipe while
+        # the instance runs, so once the pipe buffer filled up open stage
+        # control would block forever on its next write
+        self.p = subprocess.Popen(self.cmd, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL, text=True)
 
     def stop(self):
         if isinstance(self.p, subprocess.Popen):
             self.p.send_signal(signal.SIGINT)
-            self.logger.info(self.p.communicate())
+            try:
+                self.p.wait(timeout=STOP_TIMEOUT)
+            except subprocess.TimeoutExpired:
+                # never wait indefinitely: this runs inside a request, and the
+                # switchboard serves one request at a time
+                self.logger.warning('OpenStageControl did not stop on SIGINT, '
+                        'terminating it')
+                self.p.terminate()
+                try:
+                    self.p.wait(timeout=STOP_TIMEOUT)
+                except subprocess.TimeoutExpired:
+                    self.logger.warning('OpenStageControl did not terminate, '
+                            'killing it')
+                    self.p.kill()
+                    self.p.wait()
             self.p = None
 
     def join(self):
         if isinstance(self.p, subprocess.Popen):
             self.p.wait()
-            self.logger.info(self.p.communicate())
 
     def terminate(self):
         return

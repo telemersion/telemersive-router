@@ -30,7 +30,9 @@ Each proxy type is its own module implementing a `multiprocessing.Process` subcl
 1. implemented as a module under `proxies/`,
 2. exported from `proxies/__init__.py`,
 3. added to `valid_types` in `switchboard.py`, and
-4. dispatched in the `if/elif` chain in `start_proxy()`.
+4. dispatched in the `if/elif` chain in `build_proxy()` (used both by `start_proxy()` and by the supervisor when it revives a dead proxy).
+
+A background supervisor thread restarts proxies whose process has died, up to `max_proxy_revivals` times per port — see [docs/room-lifecycle.md](docs/room-lifecycle.md). Changes to `myproxies` must be made under `myproxies_lock`; reads should go through `snapshot()` rather than iterating it directly.
 
 Types: `mirror` (echoes packets back, for connectivity testing), `one2oneBi` (1:1 relay), `one2manyMo` (1 source → N sinks, sink→source traffic discarded), `one2manyBi` (1 source ↔ N sinks, uses `many_port` with +1 offset convention), `many2manyBi` (relays to all active clients except sender), `OpenStageControl` (launches an Open Stage Control web UI process; expects a `many2manyBi` proxy already running on `many_port` for OSC relaying).
 

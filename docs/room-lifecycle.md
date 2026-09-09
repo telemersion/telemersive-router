@@ -87,14 +87,18 @@ by the time of their last packet and forgets them after 10s of silence. Gateways
 send heartbeats well inside that window; a payload-less OSC `/hb` packet counts
 as a heartbeat without being forwarded. Self-correcting.
 
-**Proxy liveness — nobody.** `is_alive()` exists and is reported through
-`GET /proxies/<port>` and `GET /rooms/<room>`, but nothing consumes it. The
-manager never asks.
+**Proxy liveness — the switchboard's own supervisor.** A background thread
+checks every `supervisor_interval` seconds that each registered proxy is still
+running and restarts the ones that are not, up to `max_proxy_revivals` times per
+port so a proxy that cannot survive is not restarted forever. A revived proxy
+binds its port again and the peers re-register with it on their next packet.
+`GET /proxies/<port>/state` reports `revivals` alongside `running` and `pid`.
 
-The consequence is worth stating plainly: the invariant *"the room exists,
-therefore its 82 relays are running"* is established once, at creation, and is
-never checked again. The manager's belief that a room's ports are up is not a
-measurement, it is a memory of having POSTed them successfully.
+The manager still never asks. It has no way of knowing whether a room's ports
+are up, and its belief that they are is not a measurement but a memory of
+having POSTed them successfully. The supervisor closes that gap from the
+switchboard side only: it can restore a room's ports, but only the manager
+could notice that a room is missing ports it never managed to create.
 
 ## Death
 
@@ -114,7 +118,7 @@ media path. The room is never rebuilt, so the dead port stays dead. Recovery
 used to require every peer to leave so the room could be torn down and
 recreated — not an option mid-performance.
 
-Two things now prevent this from becoming permanent:
+Three things now prevent this from becoming permanent:
 
 - Relays survive transient errors. A failed loop iteration is logged and
   retried rather than ending the process, and only `MAX_CONSECUTIVE_ERRORS`
@@ -124,6 +128,8 @@ Two things now prevent this from becoming permanent:
   whose process is gone and recreates it, so any repeated POST for that port
   repairs it. Previously the stale entry answered `Proxy already running`,
   which is a statement about registration, not about liveness.
+- The supervisor restarts a proxy that died without anyone having to ask,
+  which is what makes recovery possible while the room is still in use.
 
 **The shared state manager becomes unreachable.** All proxies of all rooms
 share one `multiprocessing.Manager()` ([`switchboard.py`](../switchboard/switchboard.py)),
@@ -146,10 +152,18 @@ Restarting `telemersive-switchboard` kills every relay of every room instantly,
 and the manager will not rebuild them for any room that still exists (see
 above). Avoid restarting it while rooms are live.
 
-## Not covered here
+**Open Stage Control sessions.** Each room gets a session directory named after
+the room. Room names are chosen by the clients and are not restricted, so they
+are reduced to safe characters before being used as a path — a name containing
+`..` or `/` would otherwise escape the sessions directory, and one containing
+shell metacharacters used to be interpreted as a command, because the session
+template was copied with `os.system`. It is copied directly now.
 
-Nothing periodically compares the two views of the world. A supervisor — either
-the switchboard watching its own children, or the manager reconciling
-`GET /rooms/<room>` against what it believes it created — would close the gap
-between "the room exists" and "the room's media path works". Both remain
-unimplemented.
+## Still missing
+
+The manager never verifies that the ports it asked for exist. The switchboard's
+supervisor can restore a proxy that died, but it only knows about proxies that
+were registered in the first place — if a `POST` failed during room creation,
+that port is simply absent, and nothing on either side will ever notice. A
+reconciliation pass in the manager, comparing `GET /rooms/<room>` against the
+82 proxies it believes it created, would close that remaining gap.

@@ -202,6 +202,7 @@ The response for a single proxy looks like this:
 {
   "running": true,
   "pid": 12345,
+  "revivals": 0,
   "packets_in": 1024,
   "bytes_in": 1458176,
   "packets_out": 1024,
@@ -211,6 +212,27 @@ The response for a single proxy looks like this:
   }
 }
 ```
+
+`revivals` counts how often the supervisor had to restart this proxy (see
+below). A proxy that keeps needing to be revived is worth looking into; the
+reason it died is logged to `error.log`.
+
+### Supervision of running proxies
+
+Proxies run as separate processes, and nothing outside the switchboard notices
+when one of them dies — the telemersive-manager only creates ports for a room
+that does not exist yet, so a room that outlives its proxies would keep its
+ports dead until every peer has left it.
+
+A background thread therefore checks every `supervisor_interval` seconds
+(default 5) that each registered proxy is still running, and restarts the ones
+that are not. A revived proxy binds its port again and the connected peers
+re-register with it on their next packet, so a relay that dies mid-session
+recovers on its own within a few seconds.
+
+The same port is revived at most `max_proxy_revivals` times (default 5), so a
+proxy that cannot survive is not restarted forever. Both values are set at the
+top of `switchboard.py`.
 
 `<base>/rooms/<room>/state` returns an object mapping each proxy's port in
 that room to a state object of the same shape. Traffic counters and the
